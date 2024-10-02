@@ -1,0 +1,4 @@
+2024-09-04 05:17:46 - Rigths to assin: ["1"]
+2024-09-04 05:54:54 - Rigths to assin: ["2"]
+2024-09-04 06:02:21 - Rigths to assin: ["1","2"]
+2024-09-04 06:29:33 - Rigths to assign: [{"RoleID":1,"MenuID":"1","AssignmentType":"G","CreatedBy":1,"StartDate":"2024-09-04 18:29:33"},{"RoleID":1,"MenuID":"2","AssignmentType":"G","CreatedBy":1,"StartDate":"2024-09-04 18:29:33"}]
