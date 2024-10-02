@@ -92,6 +92,9 @@ vendor/
 
 # Modules Testing
 _modules/*
+public/assets/plugins/
+public/assets/applog/
+
 
 # phpenv local config
 .php-version
