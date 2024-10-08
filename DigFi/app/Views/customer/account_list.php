@@ -33,7 +33,7 @@
                                                 <th><strong><small>Account Number</small></strong></th>
                                                 <th><strong><small>Account Name</small></strong></th>
                                                 <th><strong><small>Account Type</small></strong></th>
-                                                <th><strong><small>Nature</small></strong></th> 
+                                                <th><strong><small>Category</small></strong></th> 
                                                 <th><strong><small>Account Status</small></strong></th>
                                                 <th><strong><small>Action</small></strong></th>
                                             </tr>
@@ -56,10 +56,10 @@
                                                             </small>
                                                     </td>
                                                     <td>
-                                                       <small> <?php echo $account->AccountType; ?> </small>
+                                                       <small> <?php echo $account->AccountTypeName; ?> </small>
                                                     </td>
                                                     <td>
-                                                       <small> <?php echo $account->AccountNature; ?> </small>
+                                                       <small> <?php echo $account->AccountNatureName; ?> </small>
                                                     </td>
                                                     <td>
                                                        <small> <?php echo $account->AccountStatus; ?> </small>
@@ -68,9 +68,10 @@
 
                                                         <a href="<?php echo base_url('customer/accounts/edit/'.$account->AccountID);?>" class="btn btn-xs btn-primary edit-client"  data-editid="<?php echo $account->AccountID; ?>" title="Edit <?php echo $account->AccountName;?>"><i class="fas fa-edit"></i></a>
                                                         <?php 
-                                                            if ($account->Deleted==0) {?>                                                               
-                                                            <a href="#" data-toggle="modal" data-target="#confirm-delete-modal" class="btn btn-xs btn-danger delete-account" data-deleteid="<?php echo $account->AccountID; ?>" title="Delete <?php echo $account->AccountName;?>?"><i class="fas fa-trash"></i></a>                                                         
-                                                             <?php  } ?>
+                                                            if ($account->Deleted==0) {                                                               
+                                                            echo "<a href='#' data-toggle='modal' data-target='#confirm-delete-modal' class='btn btn-xs btn-danger delete-account' data-deleteid='$account->AccountID' title='Delete $account->AccountName'><i class='fas fa-trash'></i></a> ";
+                                                               }    
+                                                            ?>
                                                         
 
                                                     </td>

@@ -80,10 +80,19 @@ $routes->post('customer/delete-customer', 'CustomerManager::deleteCustomer');
 
 $routes->get('customer/accounts', 'CustomerManager::accountIndex');
 $routes->get('customer/list-customers', 'CustomerManager::getCustomerList');
-$routes->get('customer/create-edit-account/edit/(:any)', 'CustomerManager::createEditAccount');
+$routes->get('customer/accounts/edit/(:num)', 'CustomerManager::createEditAccount');
 $routes->get('customer/create-edit-account', 'CustomerManager::createEditAccount');
 $routes->post('customer/save-account', 'CustomerManager::saveAccount');
 $routes->post('customer/change-account-status', 'CustomerManager::changeAccountStatus');
+
+
+$routes->get('loans/loan-applications', 'FinanceController::loanApplications');
+$routes->get('loans/loan-details/(:num)', 'FinanceController::loanDetails');
+$routes->get('loans/apply-loan', 'FinanceController::applyLoan');
+$routes->get('loans/apply-loan/(:num)', 'FinanceController::applyLoan');
+$routes->post('loans/loan-save', 'FinanceController::saveLoanApplication');
+$routes->post('loans/loan-approve', 'FinanceController::approveLoan');
+$routes->post('loans/loan-reject', 'FinanceController::rejectLoan');
 
 
 

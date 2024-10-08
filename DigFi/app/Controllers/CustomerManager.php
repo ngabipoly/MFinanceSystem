@@ -3,7 +3,7 @@ namespace App\Controllers;
 use App\Models\ClientModel as CustomerModel;
 use App\Models\UserModel;
 use App\Models\IdentificationTypesModel as IDTypesModel;
-use App\Models\AccountModel;
+use App\Models\CustomerAccountModel as AccountModel;
 use App\Models\AccountHolderModel;
 use App\Models\AccountNaturesModel as AccountCategoryModel;
 use App\Models\AccountTypesModel;
@@ -215,7 +215,7 @@ class CustomerManager extends BaseController
     
     public function accountIndex():string{
         $account = new AccountModel();
-        $data['accounts'] = $account->findAll();
+        $data['accounts'] = $account->getAccounts();
         return view('customer/account_list', $data);
     }
 
@@ -239,6 +239,7 @@ class CustomerManager extends BaseController
 
     public function createEditAccount()
     {
+        log_message('debug', 'Entering createEditAccount function. Request URI is: ' . $this->request->uri->getPath());
         $accountCategory = new AccountCategoryModel();
         $types = new AccountTypesModel();
         $totalSegments = $this->request->uri->getTotalSegments();
@@ -247,65 +248,193 @@ class CustomerManager extends BaseController
         $data = [
             'page' => 'Accounts',
             'categories'=>$accountCategory->findAll(),
-            'accountTypes' => $types->findAll()
+            'accountTypes' => $types->findAll(),
+            'mode' => $mode
         ];
+    
+        log_message('debug', 'Total URI segments: ' . $totalSegments);
+        log_message('debug', 'Mode: ' . $mode);
+        log_message('debug', 'Account ID: ' . $accountId);
     
         // Check if mode is valid
         if (!in_array($mode, ['create', 'edit'])) {
+            log_message('error', 'Invalid operation mode: ' . $mode);
             throw new \Exception("Invalid operation mode");
         }
-    
-        $account = new AccountModel();        
-        $data['account'] = $accountId ? $account->find($accountId) : [];
-    
-        // If in edit mode and account not found, redirect with error
-        if ($mode === 'edit' && !$data['account']) {
-            return redirect()->to('/customer/accounts')->with('error', 'Account not found.');
+
+        if ($mode === 'edit') {
+            $data['accountId'] = $accountId;
+            $account = new AccountModel();  
+            $holderModel = new AccountHolderModel();      
+            $data['account'] = $account->asObject()->find($accountId);
+            $data['holders'] = $holderModel->getAccountHolders($accountId);
+            log_message('debug', 'Edit Account data: ' . json_encode($data['account']));
+                    // If in edit mode and account not found, redirect with error
+            if ($mode === 'edit' && !$data['account']) {
+                log_message('error', 'Account not found.');
+                return redirect()->back()->with('error', 'Account Details not found.');
+            }
         }
     
-        $data['mode'] = $mode; 
+        
+        log_message('debug', 'Exiting createEditAccount function. Data: ' . json_encode($data));
         return view('customer/account_form', $data);
     }
+
     
 
     public function saveAccount() {
-        $account = new AccountModel();
-        $data = [
-            'AccountName' => $this->request->getPost('account-name'),
-            'AccountType' => $this->request->getPost('account-type'),
-            'AccountNature' => $this->request->getPost('account-nature'),
-            'AccountNumber' => $this->request->getPost('account-number'),
-            'AccountStatus' => $this->request->getPost('account-status'),
-            'DateCreated' => date('Y-m-d H:i:s'),
-            'CreatedBy' => $this->user['UserId']    
-        ];
-        $exec_mode = $this->request->getPost('exec-mode');
-        if($exec_mode == 'edit') {
-            $accountId = $this->request->getPost('account-id');
-            $update_account = $account->update($accountId, $data);
-            if(!$update_account) {
-                return redirect()->back()->withInput()->with('errors', $account->errors());                    
+        try {
+            log_message('debug', 'Entering saveAccount function.');
+            $account = new AccountModel();
+            $rules  = [
+                'account-name' => 'required|alpha_numeric_punct|min_length[8]|max_length[50]',
+                'account-type' => 'required|numeric',
+                'account-category' => 'required|numeric',
+                'account-status' => 'required',
+                'holders' => 'required'
+            ];
+    
+            $data = [
+                'AccountName' => $this->request->getPost('account-name'),
+                'AccountType' => $this->request->getPost('account-type'),
+                'AccountNature' => $this->request->getPost('account-category'),
+                'AccountStatus' => $this->request->getPost('account-status'),
+                'DateCreated' => date('Y-m-d H:i:s'),
+                'CreatedBy' => $this->user['UserId']    
+            ];
+    
+            $maxHolders = $this->request->getPost('max-holders');
+            $minHolders = $this->request->getPost('min-holders');
+            $holders = $this->request->getPost('holders');
+            log_message('debug', 'RawHolders: ' . $holders);
+            $holdersArray = explode(':', $holders);  // Changed to 'holdersArray' to avoid confusion with other $data
+    
+            log_message('debug', 'Data: ' . json_encode($data));
+            log_message('debug', 'Holders: ' . json_encode($holdersArray));
+    
+            if (!$this->validate($rules)) {
+                $validation = \Config\Services::validation();
+                log_message('debug', 'Validation errors: ' . json_encode($validation->getErrors()));
+                return redirect()->back()->withInput()->with('errors', $validation->getErrors());
             }
-            return redirect()->to(base_url('customer/account-list'))->with('success', 'Account updated successfully');
+    
+            // Start transaction
+            $db = \Config\Database::connect();
+            $db->transStart();
+    
+            $exec_mode = $this->request->getPost('exec-mode');
+            if($exec_mode == 'edit') {
+                $accountId = $this->request->getPost('account-id');
+                log_message('debug', 'Updating account with ID: ' . $accountId);
+                $update_account =  $account->update($accountId, $data);
+    
+                if(!$update_account) {
+                    $db->transRollback();
+                    log_message('debug', 'Update account failed. Errors: ' . json_encode($account->errors()));
+                    return redirect()->back()->withInput()->with('errors', $account->errors());                    
+                }
+    
+                // Complete the transaction after all operations
+                $db->transComplete();
+                if($db->transStatus() === false) {
+                    log_message('debug', 'Transaction failed.');
+                    return redirect()->back()->withInput()->with('errors', $account->errors());
+                }
+    
+                log_message('debug', 'Exiting saveAccount function. Update successful.');
+                return redirect()->to(base_url('customer/account-list'))->with('success', 'Account updated successfully');
+            }
+    
+            // Add new account
+            log_message('debug', 'Inserting new account.');
+            $add_account = $account->insert($data);
+            if(!$add_account) {
+                $db->transRollback();
+                log_message('debug', 'Insert account failed. Errors: ' . json_encode($account->errors()));
+                return redirect()->back()->withInput()->with('errors', $account->errors());
+            }
+    
+            $accountId = $account->getInsertID();
+
+            //Create account number
+            if($exec_mode == 'create') {                
+                 $acData = [
+                     'AccountNumber' => $this->generateAccountNumber($accountId)
+                 ];
+             
+                 log_message('debug', 'Generating account number for ID: ' . $accountId);
+                 $genAccountNum = $account->update($accountId, $acData);
+             
+                 if(!$genAccountNum) {
+                     $db->transRollback();
+                     log_message('debug', 'Generating account number failed. Errors: ' . json_encode($account->errors()));
+                     return redirect()->back()->withInput()->with('errors', $account->errors());
+                 }
+            }
+    
+            // Account holders insertion using the correct model
+            log_message('debug', 'Inserting account holders.');
+            $accountHolder = new AccountHolderModel();  // Use appropriate model for account holders
+    
+            foreach ($holdersArray as $holderId) {
+                $holderData = [
+                    'AccountID' => $accountId,
+                    'CustomerID' => $holderId,
+                    'CreatedAt' => date('Y-m-d H:i:s'),
+                    'createdBy' => $this->user['UserId']
+                ];
+                $add_account_holder = $accountHolder->insert($holderData);  // Use correct model for inserting holders
+    
+                if(!$add_account_holder) {
+                    $db->transRollback();
+                    log_message('debug', 'Insert account holder failed. Errors: ' . json_encode($accountHolder->errors()));
+                    return redirect()->back()->withInput()->with('errors', $accountHolder->errors());
+                }
+            }
+    
+            // Complete the transaction after all operations
+            $db->transComplete();
+            if($db->transStatus() === false) {
+                log_message('debug', 'Transaction failed.');
+                return redirect()->back()->withInput()->with('errors', $account->errors());
+            }
+    
+            log_message('debug', 'Exiting saveAccount function. Insert successful.');
+            return redirect()->to(base_url('customer/accounts'))->with('success', 'Account added successfully');            
+    
+        } catch (\Exception $e) {
+            log_message('debug', 'Exception in saveAccount function: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('errors', $e->getMessage());
         }
-        $add_account = $account->insert($data);
-        if(!$add_account) {
-            return redirect()->back()->withInput()->with('errors', $account->errors());
-        }
-        return redirect()->to(base_url('customer/account-list'))->with('success', 'Account added successfully');
-    }
+    }    
+
 
     public function changeAccountStatus() {
+        log_message('debug', 'Entering changeAccountStatus function. Request URI is: ' . $this->request->uri->getPath());
         $account = new AccountModel();
         $accountId = $this->request->getPost('account-id');
         $accountStatus = $this->request->getPost('account-status');
         $data = [
             'AccountStatus' => $accountStatus
         ];
+        log_message('debug', 'Account ID: ' . $accountId . ', Account Status: ' . $accountStatus);
         $update_account = $account->update($accountId, $data);
         if(!$update_account) {
+            log_message('debug', 'Update account failed. Errors: ' . json_encode($account->errors()));
             return redirect()->back()->withInput()->with('errors', $account->errors());                    
         }
+        log_message('debug', 'Exiting changeAccountStatus function. Update successful.');
         return redirect()->to(base_url('customer/account-list'))->with('success', 'Account status updated successfully');
     }
+
+    public function generateAccountNumber($customerId)
+    {
+        $accountNumber = 'ACC-' . str_pad($customerId, CUSTOMER_ACCOUNT_LENGTH, ACCOUNT_PAD_CHAR, STR_PAD_LEFT);    
+        if ($accountNumber) {
+            return $accountNumber;
+        }
+        return false;
+    }  
+    
 }

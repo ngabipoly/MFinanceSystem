@@ -879,7 +879,7 @@ $('#add-holder').click(function(e) {
       // Add the rows via DataTable API
       $.each(response.data, function(index, customer) {
         let addLink = `
-          <a href="#" class="btn btn-success btn-xs btn-add-holder" data-provider-id="${customer.ProviderID}" title="Add Customer">
+          <a href="#" class="btn btn-success btn-xs btn-add-holder rounded-circle" data-customer-id="${customer.ClientID}" data-customer-name="${customer.LastName} ${customer.FirstName}" data-customer-occupation="${customer.Occupation}" data-customer-phone="${customer.PhoneNumber}" data-customer-idnumber="${customer.IDNumber}" data-customer-photo="${customer.CustomerPhoto}" data-customer-dob="${customer.DateOfBirth}" title="Add Customer">
             <i class="fas fa-plus"></i>
           </a>`;
 
@@ -904,8 +904,63 @@ $('#add-holder').click(function(e) {
   });
 });
 
+$(document).on('click', '.btn-add-holder', function() {
+  // Get customer data from data attributes
+  let customerId = $(this).data('customer-id');
+  let customerName = $('<div>').text($(this).data('customer-name')).html();
+  let customerOccupation = $('<div>').text($(this).data('customer-occupation')).html();
+  let customerPhoneNumber = $('<div>').text($(this).data('customer-phone')).html();
+  let customerIDNumber = $('<div>').text($(this).data('customer-idnumber')).html();
+  let customerPhoto = $(this).data('customer-photo');
+  let customerDOB = $('<div>').text($(this).data('customer-dob')).html();
+  let selected = $('#holders').val();
 
+  selectedArray = selected.split(':');
+  if (selectedArray.includes(String(customerId)) || selectedArray.includes(customerId)) {
+    toastr.error(`Customer ${customerName} is already selected.`);
+    return false;
+  }
 
+  selected = selected ? `${selected}:${customerId}` : customerId;
+  $('#holders').val(selected);
+  
+  // photoPath is passed as a JSON-encoded string from PHP
+  let photoPath = <?php echo json_encode(CLIENT_PHOTO_PATH); ?>;
+
+  // Create customer card with escaped details
+  let card = ` 
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">
+          <strong>${customerName}</strong>
+        </div>
+        <div class="card-body">
+          <img src="${photoPath}${customerPhoto}" class="img-fluid" alt="Customer Photo" style="height: 64px; width: 64px">
+          <p><strong>Occupation:</strong> ${customerOccupation} </p>
+          <p><strong>Phone Number:</strong> ${customerPhoneNumber} </p>
+          <p><strong>ID Number:</strong> ${customerIDNumber} </p>
+          <p><strong>Date of Birth:</strong> ${customerDOB} </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Add the card to the holder-details section
+  $('#holder-details').append(card);
+
+});
+
+$('#account-category').change(function(){
+  let maxHolders = $(this).find(':selected').data('maxholders');
+  let minHolders = $(this).find(':selected').data('minholders');
+  $('#max-holders').val(maxHolders);
+  $('#min-holders').val(minHolders);
+});
+
+$('#save-account').click(function(e){
+  e.preventDefault();
+  $('#account-registration-form').submit();
+})
 
 function db_submit(resTarget,formSubmited,sendMsg){
   let alerts = '';
