@@ -562,5 +562,42 @@ class Entities extends BaseController{
         }
     }
 
+    public function getMember($entityType, $entityId, $groupMemberId){
+        $member = null;
+        $data = [];
+        try{
+            if($entityType == 'G'){
+                $member = new GroupMemberModel();
+                $member = $member->where('GroupID', $entityId)->where('GroupMemberID', $groupMemberId)->first();
+            }
+            if($entityType == 'S'){
+                $member = new SaccoMembersModel();
+                $member = $member->where('SaccoID', $entityId)->where('SaccoMemberID', $groupMemberId)->first();
+            }
+
+            //if member not found
+            if(!$member){
+                return $data = [
+                    'status'=> 'error',
+                    'message' => "Member not found",
+                    'data' => []
+                ];
+            }
+
+            return $data = [
+                'status'=> 'success',
+                'message' => "Execution Successful",
+                'data' => $member
+            ];
+        } catch (\Exception $e) {
+            return $data = [
+                'status'=> 'error',
+                'message' => "Error getting member details: ".$e->getMessage(),
+                'data' => []
+            ];
+        }
+
+    }
+
 
 }

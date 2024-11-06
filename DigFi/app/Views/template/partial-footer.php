@@ -1183,7 +1183,7 @@ $('#save-group-member').click(function(e){
 
       let formData = new FormData(form[0]);
       let formUrl = form.attr('action');
-      
+
       // If photo was taken, add it to form data
       if (userImage) {
           formData.append('member-photo', userImage, 'snapshot.png');
@@ -1205,6 +1205,10 @@ $('#save-group-member').click(function(e){
               }
               toastr.success(data.message);
               $('#group-member-modal').modal('hide');
+              //redirect after 3 seconds
+              setTimeout(() => {
+                  location.replace(data.redirect);
+              },5000);
           },
           error: function (xhr, status, error) {
               console.error("Error uploading image: " + error);

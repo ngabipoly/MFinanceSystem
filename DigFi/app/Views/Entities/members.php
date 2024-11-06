@@ -133,7 +133,7 @@ video, #photo {
                                                 <tbody>
                                                     <?php
                                                         foreach($members as $member) {
-                                                            $action = '';
+                                                            $action = "<div class='btn-group'> <a class='btn btn-xs btn-primary' title='View Member' data-toggle='modal' data-target='#group-member-modal' data-mode='view' data-member-id='".$member->GroupMemberID."'><i class='fas fa-eye'></i></a>";
                                                             if($member->GroupMemberStatus != "Active" && $member->Deleted != "1") {
                                                                 $action .= "<a class='btn btn-xs btn-success' title='Activate Member' data-toggle='modal' data-target='#member-status-modal' data-member-id='".$member->GroupMemberID."'><i class='fas fa-check'></i></a>";
                                                             }
@@ -145,7 +145,8 @@ video, #photo {
                                                             if($member->Deleted != "1") {
                                                                 $action .= " <a class='btn btn-xs btn-primary' title='Edit Member' data-toggle='modal' data-target='#group-member-modal' data-mode='edit' data-member-id='".$member->GroupMemberID."'><i class='fas fa-edit'></i></a> <a class='btn btn-xs btn-danger' title='Delete Member' data-toggle='modal' data-target='#member-status-modal' data-member-id='".$member->GroupMemberID."'><i class='fas fa-trash'></i></a>";
                                                             }
-
+                                                            
+                                                            $action .= "</div>";
                                                             
                                                             if($member->Deleted == "1") {
                                                                 $memberStatus = '<span class="badge badge-danger">Deleted</span>';
