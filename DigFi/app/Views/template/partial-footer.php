@@ -962,6 +962,264 @@ $('#save-account').click(function(e){
   $('#account-registration-form').submit();
 })
 
+$('.select-customer').click(function(e){
+  e.preventDefault();
+  let customerPhoto = $(this).data('customer-photo');
+  let customerName = $(this).data('customer-names');
+  let customerID = $(this).data('customer-id');
+  let customerIDNumber = $(this).data('customer-idnumber');
+  let occupation = $(this).data('customer-occupation');
+  let phonenumber = $(this).data('customer-phonenumber');
+  let adddress = $(this).data('customer-address');
+  let dob = $(this).data('customer-dob');
+  let age = $(this).data('customer-age');
+  let idFront = $(this).data('customer-idfront');
+  let idBack = $(this).data('customer-idback');
+  let gender = $(this).data('customer-gender');
+
+  $('#customer-photo').attr('src',customerPhoto);
+  $('#customer-photo').attr('alt',customerName);
+  $('#customer-idfront').attr('src',idFront);
+  $('#customer-idback').attr('src',idBack);
+  $('#customer-name').text(customerName);
+  $('#customer-gender').text(gender);
+  $('#customer-id').val(customerID);
+  $('#customer-idnumber').text(customerIDNumber);
+  $('#customer-occupation').text(occupation);
+  $('#customer-phone').text(phonenumber);
+  $('#customer-address').text(adddress);
+  $('#customer-dob').text(dob);
+  $('#customer-age').text(age);
+
+  $('#customer-modal').modal('hide');
+})
+
+$('#loan-product').change(function(){
+  let maxAmt = $(this).find(':selected').data('max-amt');
+  let minAmt = $(this).find(':selected').data('min-amt');
+  let interest = $(this).find(':selected').data('interest-rate');
+  let minTerm = $(this).find(':selected').data('min-term-months');
+  let maxTerm = $(this).find(':selected').data('max-term-months');
+  $('#max-amount').val(maxAmt);
+  $('#min-amount').val(minAmt);
+  $('#interest-rate').val(interest);
+});
+
+$('#save-application').click(function(e){
+  e.preventDefault();
+  $('#loan-application-form').submit();
+});
+
+$('#group-district').change(function(){
+  let region = $(this).find(':selected').data('group-region-name');
+  let subRegion = $(this).find(':selected').data('subregion-name');
+  let regionId = $(this).find(':selected').data('region-id');
+  let subRegionId = $(this).find(':selected').data('subregion-id');
+  
+  $('#sub-region').val(subRegion);
+  $('#group-region').val(region);
+});
+
+$('#group-add-btn').click(function(e){
+  e.preventDefault();
+  console.log('submitting form')
+  $('#group-addition-form').submit();
+});
+
+$('.group-status-change').click(function(e){
+  e.preventDefault();
+  let groupStatus = $(this).data('group-status');
+  let groupStatusName = $(this).data('group-status');
+  let groupName = $(this).data('group-name');
+  let execMode = $(this).data('group-new-status');
+  let action = $(this).attr('title');
+
+  $('#spn-action').text(action);
+  $('#group-status').val(groupStatus);
+  $('#spn-group-name').text(groupName);
+  $('#group-status').text(groupStatusName);
+  $('#group-id').val($(this).data('group-id'));
+  $('#group-new-status').val($(this).data('group-new-status'));
+  $('#group-status-modal').modal('show');
+});
+
+$('#group-status-btn').click(function(e){
+  e.preventDefault();
+  $('#group-status-form').submit();
+});
+
+///webcam control
+const video = $('#video')[0];
+const canvas = $('#canvas')[0];
+const photo = $('#photo')[0];
+
+let stream;
+let userImage = null;
+
+// Function to start webcam
+function startWebcam() {
+  try {
+      if (stream) {
+          return;
+      }
+
+      navigator.mediaDevices.getUserMedia({ video: true })
+          .then((s) => {
+              stream = s;
+              video.srcObject = stream;
+              video.play(); // Optional: Start playing the video immediately
+          })
+          .catch((err) => {
+              console.error("Error starting webcam: " + err);
+          });
+  } catch (e) {
+    console.error("Error accessing webcam: " + e);
+    toastr.error("An error occurred while starting the webcam.");    
+  }    
+  
+}
+
+// Function to stop webcam
+function stopWebcam() {
+  try {
+      if (stream) {
+          const tracks = stream.getTracks();
+          tracks.forEach(track => track.stop());
+          stream = null; // Clear the stream variable
+      }
+  } catch (e) {
+    console.error("Error Stopping webcam: " + e);
+    toastr.error("An error occurred while stopping the webcam.");    
+  }    
+  
+}
+
+// Take a snapshot when the button is clicked
+$('#snap').click(function (e) {
+    e.preventDefault(); // Prevent the default action
+    const context = canvas.getContext('2d');
+    canvas.width = video.videoWidth; // Set canvas width to video width
+    canvas.height = video.videoHeight; // Set canvas height to video height
+    context.drawImage(video, 0, 0, canvas.width, canvas.height); // Draw the video frame on the canvas
+
+    canvas.toBlob((blob) => {
+      userImage = blob;
+    })
+    const dataURL = canvas.toDataURL('image/png'); // Convert canvas to data URL
+    photo.src = dataURL; // Set the image source to the data URL
+    $(this).hide();
+    $('#photo-uploader').hide();
+    $('#video').hide();
+    $('#photo').show();
+    stopWebcam();
+    $('.start-camera').show();
+});
+
+// Stop webcam when modal is closed
+$('#group-member-modal').on('hidden.bs.modal', function () {
+    stopWebcam();
+});
+
+// Start webcam when the snapshot button is clicked
+$('.start-camera').click(function(e) {
+    e.preventDefault();
+    startWebcam(); 
+    $(this).hide();
+    $('#video').show();
+    $('#photo').hide();
+    $('#takePhoto').show();
+    $('#snap').show();
+
+});
+
+$('#photo-upload').click(function(e){
+  e.preventDefault();
+  $('#photo-uploader').show();
+  $('#video').hide();
+  $('#photo').show();
+  $('#takePhoto').hide();
+  stopWebcam();
+});
+
+$('#member-photo').change(function(e) {
+        // Get the selected file
+        let file = this.files[0];
+        userImage = null;
+        
+        if (file) {
+            $(this).siblings('.custom-file-label').text(file.name);
+            
+            if (file.type.startsWith('image/')) {
+
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#photo').attr('src', e.target.result);
+                }                
+                // Read the file as a Data URL (base64 encoded)
+                reader.readAsDataURL(file);
+            } else {
+                alert("Please select a valid image file.");
+            }
+        }
+});
+
+$('.add-group-members').click(function(e){
+  e.preventDefault();
+  let groupID = $(this).data('group-id');
+  let url = `<?php echo base_url(); ?>/entities/get-members/G/${groupID}`;
+  location.href=encodeURI(url);
+});
+
+$('#save-group-member').click(function(e){
+  e.preventDefault();
+  try {
+      let form = $('#group-member-form');
+      let fileInput = $('#member-photo')[0].files[0];
+
+      if (!userImage && !fileInput) {
+          toastr.error("Please take or upload a photo first.");
+          return;
+      }
+
+      let formData = new FormData(form[0]);
+      let formUrl = form.attr('action');
+      
+      // If photo was taken, add it to form data
+      if (userImage) {
+          formData.append('member-photo', userImage, 'snapshot.png');
+      }
+
+      console.log(formData.get('member-photo'));
+      $.ajax({
+          url: formUrl, 
+          type: 'POST',
+          data: formData,
+          processData: false, 
+          contentType: false,
+          success: function (response) {
+              let data = typeof response === 'string' ? JSON.parse(response) : response;
+              console.log("Group Member response", data);
+              if (data.status == 'error') {
+                  toastr.error(data.message);
+                  return false;
+              }
+              toastr.success(data.message);
+              $('#group-member-modal').modal('hide');
+          },
+          error: function (xhr, status, error) {
+              console.error("Error uploading image: " + error);
+              alert("Failed to upload image");
+          }
+      }); 
+    } catch (e) {
+      console.error("Error saving group members: " + e);
+      toastr.error("An error occurred while saving group members.");
+    }
+
+});
+
+
+
 function db_submit(resTarget,formSubmited,sendMsg){
   let alerts = '';
        $.ajax({
@@ -976,6 +1234,7 @@ function db_submit(resTarget,formSubmited,sendMsg){
           $(resTarget).html('');
         },
       success: function(response) {
+          let redirectUrl = '';
           
           if($.isArray(response.message)){
             //construct and show multiple messages if available
@@ -990,9 +1249,10 @@ function db_submit(resTarget,formSubmited,sendMsg){
           	if(response.status=='success'){
           		toastr.success(response.message);
               $(formSubmited).trigger("reset");    
-              if(typeof response.redir_to !='undefined'){
+              if(typeof response.redir_to !='undefined' || response.redirect !=''){
+                redirectUrl = response.redir_to || response.redirect;
                 async function pauseExecution() {
-                  console.log(`Redirecting to ${response.redir_to}`);
+                  console.log(`Redirecting in 5 seconds`);
                   await sleep(5000); //5000 milliseconds = 5 seconds
                   console.log('Redirecting Now!');
                 }
@@ -1000,7 +1260,7 @@ function db_submit(resTarget,formSubmited,sendMsg){
                 (async function main() {
                   await pauseExecution();
                   // Code here will run after the 10-second pause
-                  location.replace(response.redir_to);
+                  location.replace(redirectUrl);
                 })();        
               }  	
           	}else if(response.status=='error'){
@@ -1083,7 +1343,7 @@ function db_submit(resTarget,formSubmited,sendMsg){
       }, 15000 );
 });
 
-function bulkFileUpload(form, file_elm, upload_key) {
+function fileUpload(form, file_elm, upload_key=null) {
     let url = form.attr('action');
     let formData = new FormData(form[0]);
     let fileInput = file_elm[0];

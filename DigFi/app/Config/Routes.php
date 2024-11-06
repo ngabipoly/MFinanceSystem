@@ -88,11 +88,19 @@ $routes->post('customer/change-account-status', 'CustomerManager::changeAccountS
 
 $routes->get('loans/loan-applications', 'FinanceController::loanApplications');
 $routes->get('loans/loan-details/(:num)', 'FinanceController::loanDetails');
-$routes->get('loans/apply-loan', 'FinanceController::applyLoan');
-$routes->get('loans/apply-loan/(:num)', 'FinanceController::applyLoan');
-$routes->post('loans/loan-save', 'FinanceController::saveLoanApplication');
+$routes->get('loans/apply', 'FinanceController::applyLoan');
+$routes->get('loans/edit-application/(:num)', 'FinanceController::applyLoan');
+$routes->post('loans/save-loan', 'FinanceController::saveLoanApplication');
 $routes->post('loans/loan-approve', 'FinanceController::approveLoan');
 $routes->post('loans/loan-reject', 'FinanceController::rejectLoan');
 
+//route for entities/get-members/G/2
+
+$routes->get('entities/get-members/(:any)/(:num)', 'Entities::getMembers/$1/$2');
+$routes->get('entities/groups', 'Entities::groupIndex');
+$routes->post('entities/create-group', 'Entities::createGroup');
+$routes->get('entities/edit-group/(:num)', 'Entities::createGroup');
+$routes->post('entities/group-status-change', 'Entities::changeGroupStatus');
+$routes->post('entities/save-group-member', 'Entities::saveMember');
 
 
