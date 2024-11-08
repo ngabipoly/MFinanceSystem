@@ -1,20 +1,41 @@
 <?php echo view('template/partial-header'); ?>
 <style>
-
+/* General styling for video and photo containers */
 video, #photo {
-            border: 1px solid black;
-            width: 230px;
-            max-height: 235px;
-            max-width: 230px;
-            margin-bottom: 10px;
-        }
-        canvas {
-            display: none;
-        }
+    border: 1px solid black;
+    width: 100%;
+    max-width: 230px;
+    height: auto;
+    max-height: 235px;
+    margin-bottom: 10px;
+}
+
+/* Hide canvas elements */
+canvas {
+    display: none;
+}
+
+/* Hide elements with .hidden class */
 .hidden {
     display: none;
 }
+
+/* Responsive styling */
+@media (max-width: 768px) {
+    video, #photo {
+        max-width: 180px;
+        max-height: 185px;
+    }
+}
+
+@media (max-width: 480px) {
+    video, #photo {
+        max-width: 140px;
+        max-height: 145px;
+    }
+}
 </style>
+
 
 <!-- Content Wrapper. Contains page content -->
 <div class="content-wrapper">
@@ -133,7 +154,7 @@ video, #photo {
                                                 <tbody>
                                                     <?php
                                                         foreach($members as $member) {
-                                                            $action = "<div class='btn-group'> <a class='btn btn-xs btn-primary' title='View Member' data-toggle='modal' data-target='#group-member-modal' data-mode='view' data-member-id='".$member->GroupMemberID."'><i class='fas fa-eye'></i></a>";
+                                                            $action = "<div class='btn-group'> <a class='btn btn-xs btn-primary get-group-member' title='View Member' data-toggle='modal' data-target='#group-member-modal' data-mode='view' data-link='".base_url('entities/member')."' data-entity-type='G' data-entity-id='".$member->GroupID."'  data-member-id='".$member->GroupMemberID."'><i class='fas fa-eye'></i></a>";
                                                             if($member->GroupMemberStatus != "Active" && $member->Deleted != "1") {
                                                                 $action .= "<a class='btn btn-xs btn-success' title='Activate Member' data-toggle='modal' data-target='#member-status-modal' data-member-id='".$member->GroupMemberID."'><i class='fas fa-check'></i></a>";
                                                             }
@@ -143,7 +164,7 @@ video, #photo {
                                                             }
 
                                                             if($member->Deleted != "1") {
-                                                                $action .= " <a class='btn btn-xs btn-primary' title='Edit Member' data-toggle='modal' data-target='#group-member-modal' data-mode='edit' data-member-id='".$member->GroupMemberID."'><i class='fas fa-edit'></i></a> <a class='btn btn-xs btn-danger' title='Delete Member' data-toggle='modal' data-target='#member-status-modal' data-member-id='".$member->GroupMemberID."'><i class='fas fa-trash'></i></a>";
+                                                                $action .= " <a class='btn btn-xs btn-primary get-group-member edit-member' title='Edit Member' data-toggle='modal' data-target='#group-member-modal' data-mode='edit' data-link='".base_url('entities/member')."' data-entity-type='G' data-entity-id='".$member->GroupID."'  data-member-id='".$member->GroupMemberID."' data-member-id='".$member->GroupMemberID."'><i class='fas fa-edit'></i></a> <a class='btn btn-xs btn-danger' title='Delete Member' data-toggle='modal' data-target='#member-status-modal' data-member-id='".$member->GroupMemberID."'><i class='fas fa-trash'></i></a>";
                                                             }
                                                             
                                                             $action .= "</div>";
@@ -191,7 +212,7 @@ video, #photo {
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header bg-primary">
-                <h5 class="modal-title" id="group-member-modal">Add Group Member</h5>
+                <h5 class="modal-title" id="group-member-modal" ><span id="spn-group-exc-mode"></span> Group Member</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -204,16 +225,35 @@ video, #photo {
                     <input type="hidden" name="exec-mode" id="exec-mode" value="add">
                     <div class="row">
                         <div class="col-md-4">
-                            <div class="btn-group btn-group-justified mb-2">
-                                <button id="start" class="btn btn-success btn-xs start-camera" title="Start Camera for Live Photo">Live Photo <i class="fas fa-camera"></i></button>
-                                <button id="snap" class="btn btn-success btn-xs hidden take-snapshot" title="Take Photo">Take Photo <i class="fas fa-camera"></i> </button>
-                                <button type="button" id="photo-upload" class="btn btn-primary btn-xs" title="Upload Photo from">Upload <i class="fas fa-upload"></i></button>
+                            <h4>Member Photograph</h4>
+                            <div class="row">
+                                <div class="col-md12">
+                                    <div class="btn-group btn-group-justified mb-2">
+                                        <button id="start" class="btn btn-success btn-xs start-camera" title="Start Camera for Live Photo">Live Photo <i class="fas fa-camera"></i></button>
+                                        <button id="snap" class="btn btn-success btn-xs hidden take-snapshot" title="Take Photo">Take Photo <i class="fas fa-camera"></i> </button>
+                                        <button type="button" id="photo-upload" class="btn btn-primary btn-xs" title="Upload Photo from">Upload <i class="fas fa-upload"></i></button>
+                                    </div>                                    
+                                </div>
                             </div>
-                            <div id="takePhoto" class="hidden">
-                                <video id="video"></video>                            
-                                <canvas id="canvas"></canvas>  
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div id="takePhoto" class="hidden">
+                                        <video id="video"></video>                            
+                                        <canvas id="canvas"></canvas>  
+                                    </div>
+                                        <img id="photo" src="<?php echo base_url('assets/images/member-default.png'); ?>" alt="Captured Photo" />                                     
+                                </div>
                             </div>
-                                <img id="photo" src="<?php echo base_url('assets/images/member-default.png'); ?>" alt="Captured Photo" /> 
+                            <div class="row">
+                                <div id="photo-uploader" class="col-md-12 upload-photo hidden">
+                                    <div class="form-group ">
+                                        <div class="custom-file">
+                                            <label for="member-photo" class="custom-file-label">Upload Photo</label>
+                                            <input type="file" class="form-control form-control-sm custom-file" id="member-photo" name="member-photo" placeholder="MemberPhoto" accept="image/*" capture required />
+                                        </div>
+                                    </div>                                                                
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-8">
                             <div class="row">
@@ -248,14 +288,6 @@ video, #photo {
                                 </div>
                             </div>
                             <div class="row">
-                                <div id="photo-uploader" class="col-md-6 upload-photo hidden">
-                                    <div class="form-group ">
-                                        <div class="custom-file">
-                                            <label for="member-photo" class="">Upload Photo</label>
-                                            <input type="file" class="form-control form-control-sm custom-file" id="member-photo" name="member-photo" placeholder="MemberPhoto" accept="image/*" capture required />
-                                        </div>
-                                    </div>                                                                
-                                </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="group-member-dob">Date of Birth</label>

@@ -1167,16 +1167,39 @@ $('.add-group-members').click(function(e){
   e.preventDefault();
   let groupID = $(this).data('group-id');
   let url = `<?php echo base_url(); ?>/entities/get-members/G/${groupID}`;
+  $('#save-group-member').show().text('Save');
+  $('#spn-group-exc-mode').text('Add');
   location.href=encodeURI(url);
 });
+
+$('#add-group-member').click(function(e) {
+  e.preventDefault();
+  $('#save-group-member').show().text('Save');
+  $('#spn-group-exc-mode').text('Add');
+  $('#exec-mode').val("add");
+
+  // Make form editable by enabling all form fields
+  $('#group-member-form :input').each(function() {
+    if ($(this).attr('type') !== 'hidden') {
+      console.log($(this).attr('id'));
+      $(this).prop('disabled', false);
+      $(this).val(''); // Clear only visible and non-hidden fields
+    }
+  });
+
+  // Reset image preview to default or blank
+  $('#photo').attr('src', "<?php echo base_url('assets/images/member-default.png'); ?>"); // Replace with default path if needed
+});
+
 
 $('#save-group-member').click(function(e){
   e.preventDefault();
   try {
       let form = $('#group-member-form');
       let fileInput = $('#member-photo')[0].files[0];
+      let execMode = $('#exec-mode').val();
 
-      if (!userImage && !fileInput) {
+      if (!userImage && !fileInput && execMode == 'add') {
           toastr.error("Please take or upload a photo first.");
           return;
       }
@@ -1221,6 +1244,77 @@ $('#save-group-member').click(function(e){
     }
 
 });
+
+$('.get-group-member').click(function(e){
+  e.preventDefault();
+  let currentElement = $(this);
+  let memberID = $(this).data('member-id');
+  let entiyID = $(this).data('entity-id');
+  let entityType = $(this).data('entity-type');
+  let url = $(this).data('link');
+  let data = { entity_id: entiyID, entity_type: entityType, member_id: memberID };
+  
+  getLinkData(url, data, "Fetching data...")
+    .then((response) => {
+        console.log("Success:", response);
+        memberData = response.data;
+        memberNames = memberData.MemberName.trim().split(/\s+/);
+        $("#group-member-id").val(memberData.GroupMemberID);
+        $('#entity-id').val(memberData.GroupID);
+        $('#entity-type').val(entityType);
+        $('#photo').attr('src', `<?php echo base_url('assets/images/group-members/'); ?>${memberData.MemberPhoto}`);
+        $('#id-number').val(memberData.MemberID);
+        $('#group-member-first-name').val(memberNames[0]);
+        $('#group-member-last-name').val(memberNames[1]);
+        $('#group-member-email').val(memberData.MemberEmail);
+        $('#group-member-telephone').val(memberData.MemberPhoneNumber);
+        $('#group-member-status').val(memberData.GroupMemberStatus);
+        $('#group-member-address').val(memberData.memberAddress);
+        $('#group-member-dob').val(memberData.MemberDob);
+        if(currentElement.hasClass('edit-member')){
+          $('#exec-mode').val("edit");
+          $('#spn-group-exc-mode').text('Edit');
+          $('#save-group-member').show().text('Update');
+          //make all fileds editable
+          $('#group-member-form :input').prop('disabled', false);
+        }else{
+            $('#spn-group-exc-mode').text('View');
+            $('#group-member-form :input').prop('disabled', true); 
+            $('#save-group-member').hide();            
+        }           
+    })
+    .catch((error) => {
+        console.log("Failed:", error);      
+    });
+});
+
+function getLinkData(url, data, msg) {
+    toastr.info(msg);
+
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            type: 'POST',
+            dataType: 'json',
+            url: url,
+            data: data,
+            success: function(response) {
+                if (response.status !== 'success') {
+                    toastr.error(response.message);
+                    reject(response); // Reject the promise with response in case of error status
+                } else {
+                    toastr.success(response.message);
+                    resolve(response); // Resolve the promise with response on success
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Error Fetching Data: " + error);
+                toastr.error("An error occurred while Fetching Data.");
+                reject(error); // Reject the promise with error details
+            }
+        });
+    });
+}
+
 
 
 

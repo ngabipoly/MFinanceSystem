@@ -312,7 +312,12 @@ class Entities extends BaseController{
     public function saveMember(){
         try
         {
-            if(!$this->request->getFile('member-photo')){
+            $entityId = $this->request->getPost('entity-id');
+            $entityType = $this->request->getPost('entity-type');
+            $execMode = $this->request->getPost('exec-mode');
+            $execMessages = null;
+
+            if(!$this->request->getFile('member-photo') && $execMode != 'edit'){
                 $data = [
                     'status'=> 'error',
                     'message' => "<h6>Failed to add member</h6> \n Please take/upload Member Photo!",
@@ -322,10 +327,7 @@ class Entities extends BaseController{
                 ]; 
                 return json_encode($data);   
             }
-                $entityId = $this->request->getPost('entity-id');
-                $entityType = $this->request->getPost('entity-type');
-                $execMode = $this->request->getPost('execMode');
-                $execMessages = null;
+                
                 $memberPresent = $this->memberExists($this->request->getPost('member-id'), $entityId, $entityType);
         
                 if($execMode != 'edit'){
@@ -411,11 +413,26 @@ class Entities extends BaseController{
                         'MemberEmail' => $this->request->getPost('group-member-email'),
                         'MemberGender' => $this->request->getPost('group-member-gender'),
                         'MemberPhoneNumber' => $this->request->getPost('group-member-telephone'),
-                        'MemberPhoto' => $newName,
+                        'MemberDob' => $this->request->getPost('group-member-dob'),
+                        'memberAddress' => $this->request->getPost('group-member-address'),
                         'GroupID' => $this->request->getPost('entity-id'),
                         'CreatedAt' => date('Y-m-d H:i:s'),
                         'CreatedBy' => $this->user['UserId']
                     ];
+                    if($execMode == 'add'){
+                        $data['MemberPhoto'] = $newName;
+                    }
+
+                    if($execMode == 'edit'){
+                        //if photo was uploaded add it to the data array
+                        $data['GroupMemberID'] = $this->request->getPost('group-member-id');
+                        if($newName){
+                            $data['MemberPhoto'] = $newName;
+                        }
+                        
+                        $data['UpdatedAt'] = date('Y-m-d H:i:s');
+                        $data['UpdatedBy'] = $this->user['UserId'];
+                    }
                     $member = new GroupMemberModel();   
                     $execute = $member->save($data);
                     if(!$execute){
@@ -562,6 +579,13 @@ class Entities extends BaseController{
         }
     }
 
+    public function loadMemberData(){
+        $entityType = $this->request->getPost('entity_type');
+        $entityId = $this->request->getPost('entity_id');
+        $memberId = $this->request->getPost('member_id');
+        return $this->getMember($entityType, $entityId, $memberId);
+    }
+
     public function getMember($entityType, $entityId, $groupMemberId){
         $member = null;
         $data = [];
@@ -577,24 +601,28 @@ class Entities extends BaseController{
 
             //if member not found
             if(!$member){
-                return $data = [
+                $data = [
                     'status'=> 'error',
                     'message' => "Member not found",
                     'data' => []
                 ];
+                return json_encode($data);
             }
 
-            return $data = [
+            $data = [
                 'status'=> 'success',
                 'message' => "Execution Successful",
                 'data' => $member
             ];
+
+            return json_encode($data);
         } catch (\Exception $e) {
-            return $data = [
+            $data = [
                 'status'=> 'error',
                 'message' => "Error getting member details: ".$e->getMessage(),
                 'data' => []
             ];
+            return json_encode($data);
         }
 
     }

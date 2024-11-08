@@ -102,5 +102,9 @@ $routes->post('entities/create-group', 'Entities::createGroup');
 $routes->get('entities/edit-group/(:num)', 'Entities::createGroup');
 $routes->post('entities/group-status-change', 'Entities::changeGroupStatus');
 $routes->post('entities/save-group-member', 'Entities::saveMember');
+$routes->post('entities/member', 'Entities::loadMemberData');
+$routes->get('entities/saccos', 'Entities::saccosIndex');
+$routes->post('entities/save-sacco', 'Entities::saveSacco');
+$routes->post('entities/change-sacco-status/', 'Entities::changeSaccoStatus/');
 
 
