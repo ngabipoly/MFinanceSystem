@@ -53,7 +53,7 @@
                                                         echo '<td><small>'.$member->MemberLastName.'</small></td>';
                                                         echo '<td><small>'.$member->MemberEmail.'</small></td>';
                                                         echo '<td><small>'.$member->MemberPhoneNumber.'</small></td>';
-                                                        echo '<td><small>'.$member->MemberStatus.'</small></td>';
+                                                        echo '<td><small>'.$memberStatus.'</small></td>';
                                                         echo '<td><small>'.$action.'</small></td>';
                                                         echo '</tr>';
                                                     }
