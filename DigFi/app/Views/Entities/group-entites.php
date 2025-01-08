@@ -41,7 +41,7 @@
                                                 $groupStatus = '';
                                                 
                                                 if($group->GroupStatus != "Suspended" && $group->Deleted != "1") {
-                                                    $action .= '<a href="#" title="Add Members" class="btn btn-xs bg-olive  add-group-members" data-group-id="'.$group->GroupID.'" data-toggle="modal" data-target="#group-members-modal"><i class="fas fa-user-plus"></i></a> <a href="#" title="Edit Group" data-toggle="modal" data-target="#group-modal" data-mode="edit" data-group-id="'.$group->GroupID.'" data-group-name="'.$group->GroupName.'" data-group-status="'.$group->GroupStatus.'" data-group-region="'.$group->RegionID.'" data-group-subregion="'.$group->SubRegionID.'" data-group-district="'.$group->DistrictID.'" data-description="'.$group->GroupDescription.'" class="btn btn-xs btn-primary"><i class="fas fa-edit"></i></a>  <a href="#" title="Suspend Group" class="btn btn-xs btn-warning disable-group group-status-change" data-group-name="'.$group->GroupName.'" data-group-id="'.$group->GroupID.'" data-group-new-status="Suspended" data-toggle="modal" data-target="#group-status-modal"><i class="fas fa-ban"></i></a>';
+                                                    $action .= '<a href="#" title="Add Members" class="btn btn-xs bg-olive members" data-entity-type="G" data-entity-id="'.$group->GroupID.'" data-toggle="modal" data-target="#group-members-modal"><i class="fas fa-user-plus"></i></a> <a href="#" title="Edit Group" data-toggle="modal" data-target="#group-modal" data-mode="edit" data-group-id="'.$group->GroupID.'" data-link ="'.base_url('entities/get-group').'" class="btn btn-xs btn-primary get-group edit-group"><i class="fas fa-edit"></i></a>  <a href="#" title="Suspend Group" class="btn btn-xs btn-warning disable-group group-status-change" data-group-name="'.$group->GroupName.'" data-group-id="'.$group->GroupID.'" data-group-new-status="Suspended" data-toggle="modal" data-target="#group-status-modal"><i class="fas fa-ban"></i></a>';
                                                 }
 
                                                 if($group->GroupStatus != "Active" && $group->Deleted != "1") {
@@ -98,6 +98,8 @@
             </div>
             <div class="modal-body">
                 <form id="group-addition-form" class="form-horizontal db-submit" action="<?php echo base_url('entities/create-group'); ?>" method="post">
+                    <input type="hidden" name="exec-mode" id="exec-mode" value="add">
+                    <input type="hidden" name="group-id" id="group-id">
                     <div id="group-addition-form">
                         <div class="row">
                             <div class="col-md-6">
@@ -161,15 +163,15 @@
                 </button>
             </div>
             <div class="modal-body">
-                <form id="group-status-form" class="form-horizontal db-submit" action="<?php echo base_url('entities/group-status-change'); ?>" method="post">
+                <form id="group-status-form" class="form-horizontal db-submit" action="<?php echo base_url('entities/group-status-change'); ?>" method="post" data-initmsg="Changing Group Status...">
                     <div id="group-status-form">
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group">
                                    <i class="fas fa-exclamation-triangle text-danger fa-3x"></i> Are you sure you want to <strong> <span id="spn-action"></span> <span id="spn-group-name"></span> </strong>?
-                                   <input type="hidden" name="group-status" id="group-status">
-                                   <input type="hidden" name="group-id" id="group-id">
-                                   <input type="hidden" name="group-new-status" id="group-new-status">
+                                   <input type="hidden" name="group-status" id="ch-group-status">
+                                   <input type="hidden" name="group-id" id="ch-group-id">
+                                   <input type="hidden" name="group-new-status" id="ch-group-new-status">
                                    <input type="hidden" name="exec-mode" id="exec-mode">
                                 </div>
                             </div>

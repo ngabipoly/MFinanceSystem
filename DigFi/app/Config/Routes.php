@@ -103,8 +103,12 @@ $routes->get('entities/edit-group/(:num)', 'Entities::createGroup');
 $routes->post('entities/group-status-change', 'Entities::changeGroupStatus');
 $routes->post('entities/save-group-member', 'Entities::saveMember');
 $routes->post('entities/member', 'Entities::loadMemberData');
-$routes->get('entities/saccos', 'Entities::saccosIndex');
+$routes->get('entities/saccos', 'Entities::saccoIndex');
 $routes->post('entities/save-sacco', 'Entities::saveSacco');
+$routes->post('entities/get-sacco/', 'Entities::getSacco');
+$routes->post('entities/get-group/', 'Entities::getGroup');
 $routes->post('entities/change-sacco-status/', 'Entities::changeSaccoStatus/');
+$routes->post('entities/save-sacco-member','Entities::saveMember');
+$routes->post('entities/change-sacco-member-status','Entities::changeMemberStatus');
 
 

@@ -1010,14 +1010,14 @@ $('#save-application').click(function(e){
   $('#loan-application-form').submit();
 });
 
-$('#group-district').change(function(){
+$('#group-district, #sacco-district').change(function(){
   let region = $(this).find(':selected').data('group-region-name');
   let subRegion = $(this).find(':selected').data('subregion-name');
   let regionId = $(this).find(':selected').data('region-id');
   let subRegionId = $(this).find(':selected').data('subregion-id');
   
-  $('#sub-region').val(subRegion);
-  $('#group-region').val(region);
+  $('#sub-region, #sacco-sub-region').val(subRegion);
+  $('#group-region, #sacco-region').val(region);
 });
 
 $('#group-add-btn').click(function(e){
@@ -1028,24 +1028,47 @@ $('#group-add-btn').click(function(e){
 
 $('.group-status-change').click(function(e){
   e.preventDefault();
+  
+  let groupId = $(this).data('group-id');
   let groupStatus = $(this).data('group-status');
   let groupStatusName = $(this).data('group-status');
   let groupName = $(this).data('group-name');
   let execMode = $(this).data('group-new-status');
   let action = $(this).attr('title');
+  console.log("Group Id: ", groupId, "Status:", groupStatus, "New Status:", execMode)
 
   $('#spn-action').text(action);
-  $('#group-status').val(groupStatus);
+  $('#ch-group-status').val(groupStatus);
   $('#spn-group-name').text(groupName);
-  $('#group-status').text(groupStatusName);
-  $('#group-id').val($(this).data('group-id'));
-  $('#group-new-status').val($(this).data('group-new-status'));
+  $('#ch-group-status').text(groupStatusName);
+  $('#ch-group-id').val(groupId);
+  $('#ch-group-new-status').val(execMode);
   $('#group-status-modal').modal('show');
 });
 
 $('#group-status-btn').click(function(e){
   e.preventDefault();
   $('#group-status-form').submit();
+});
+
+$('.sacco-status').click(function(e){
+    let action = $(this).data('action');
+    let saccoName = $(this).data('sacco');
+    let saccoOldStatus = $(this).data('old-status');
+    let saccoNewStatus = $(this).data('new-status');
+    let saccoId = $(this).data('sacco-id');
+
+    console.log(`id:${saccoId}, Action: ${action}, oStatus: ${saccoOldStatus}, nStatus: ${saccoNewStatus}`)
+
+    $('#spn-action').text(action);
+    $('#spn-sacco-name').text(saccoName);
+    $('#sacco-status').val(saccoOldStatus);
+    $('#saccos-id').val(saccoId);
+    $('#sacco-new-status').val(saccoNewStatus);
+});
+
+$('#sacco-status-btn').click(function(e){
+  $('#sacco-status-form').submit();
 });
 
 ///webcam control
@@ -1163,12 +1186,11 @@ $('#member-photo').change(function(e) {
         }
 });
 
-$('.add-group-members').click(function(e){
+$('.members').click(function(e){
   e.preventDefault();
-  let groupID = $(this).data('group-id');
-  let url = `<?php echo base_url(); ?>/entities/get-members/G/${groupID}`;
-  $('#save-group-member').show().text('Save');
-  $('#spn-group-exc-mode').text('Add');
+  let entityID = $(this).data('entity-id');
+  let entityType = $(this).data('entity-type');
+  let url = `<?php echo base_url(); ?>/entities/get-members/${entityType}/${entityID}`;
   location.href=encodeURI(url);
 });
 
@@ -1192,10 +1214,22 @@ $('#add-group-member').click(function(e) {
 });
 
 
-$('#save-group-member').click(function(e){
+$('#add-member').click(function(e){
+  e.preventDefault();  
+  let form = $('#sacco-member-form');
+  form.trigger("reset");
+  $('#photo').attr('src', "<?php echo base_url('assets/images/member-default.png'); ?>");
+  $('#spn-sacco-exc-mode').text('add');
+  $('#save-sacco-member').show().text('Save');
+  $('#sacco-member-form :input').prop('disabled', false);
+});
+
+$('#save-group-member, #save-sacco-member').click(function(e){
   e.preventDefault();
   try {
-      let form = $('#group-member-form');
+      console.log('starting process...')
+      let entityType = $('#entity-type').val();
+      let form = (entityType=='G') ? $('#group-member-form'):$('#sacco-member-form');
       let fileInput = $('#member-photo')[0].files[0];
       let execMode = $('#exec-mode').val();
 
@@ -1221,17 +1255,18 @@ $('#save-group-member').click(function(e){
           contentType: false,
           success: function (response) {
               let data = typeof response === 'string' ? JSON.parse(response) : response;
-              console.log("Group Member response", data);
+              console.log("Member Addition response", data);
               if (data.status == 'error') {
                   toastr.error(data.message);
                   return false;
               }
               toastr.success(data.message);
-              $('#group-member-modal').modal('hide');
+
+              $('.group-member-modal').modal('hide');
               //redirect after 3 seconds
               setTimeout(() => {
                   location.replace(data.redirect);
-              },5000);
+              },3000);
           },
           error: function (xhr, status, error) {
               console.error("Error uploading image: " + error);
@@ -1244,6 +1279,25 @@ $('#save-group-member').click(function(e){
     }
 
 });
+
+$('.member-status-change').click(function(e){
+  e.preventDefault();
+  let action = $(this).attr('title');
+  let memberID = $(this).data('member-id');
+  let newStatus = $(this).data('new-status');
+  let saccoID = $(this).data('sacco-id');
+  let groupId = $(this).data('group-id');
+  let memberName = `${$(this).data('last-name')} ${$(this).data('first-name')}`;
+  let entityType = $(this).data('entity-type');
+
+  $("#member-id").val(memberID);
+  $("#chg-member-name").text(memberName);
+  $('#group-id').val(groupId);
+  $("#sacco-id").val(saccoID);
+  $("#new-status").val(newStatus);
+  $("#chg-sacco-member-status").text(action);
+  console.log("Action: ",action, "Member ID: ", memberID, "New Status: ", newStatus, "Sacco ID: ", saccoID, "Group ID: ", groupId);
+})
 
 $('.get-group-member').click(function(e){
   e.preventDefault();
@@ -1288,6 +1342,137 @@ $('.get-group-member').click(function(e){
     });
 });
 
+$('#add-group-entity-btn').click(function(e){
+  $('#group-add-btn').show().text('Add Group');
+  $('#group-addition-form').trigger('reset');
+  $('#group-district').val(null).trigger('change');
+  $('#spn-group-exc-mode').text('Create')
+  $('#exec-mode').val('add');
+  $('#group-id').val(null) ;
+})
+
+$('.get-group').click(function(e){
+  e.preventDefault();
+  let form = $('#group-addition-form');
+  let currentElement = $(this);
+  let groupID = $(this).data('group-id');
+  let url = $(this).data('link');
+  let data = {group: groupID};
+  form.trigger("reset");
+
+  getLinkData(url,data,"Fetching Group Data")
+    .then((response)=>{
+      console.log("Group Data Fetch Complete!", response)
+      let group = response.data;
+      $('#group-name').val(group.GroupName);
+      $('#group-description').val(group.GroupDescription);
+      $('#group-address').val(group.GroupAddress);
+      $('#group-district').val(group.GroupDistrict).trigger('change');        
+      
+      if(currentElement.hasClass('edit-group')){
+        $('#spn-group-exc-mode').text('Edit')
+        $('#exec-mode').val('edit');
+        $('#group-id').val(groupID)
+        $('#group-add-btn').show().text('Update Group');
+      }else{
+        $('#spn-group-exc-mode').text('View')
+        $('#group-add-btn').hide();
+      }
+    })
+});
+
+$('.view-sacco, .edit-sacco').click(function(e){
+    e.preventDefault();
+    let form = $('#sacco-form');
+    let currentElement = $(this);
+    let saccoId = $(this).data('sacco-id');
+    let url = $(this).data('link');
+    let data = {sacco: saccoId};
+    form.trigger("reset");
+
+    getLinkData(url,data,"Fetching Sacco Data")
+      .then((response) => {
+        console.log("Fetch complete", response)
+        let saccoData = response.data;
+        $('#sacco-id').val(saccoId);
+        $('#sacco-name').val(saccoData.SaccoName);
+        $('#sacco-phone').val(saccoData.Phone);
+        $('#sacco-email').val(saccoData.Email);
+        $('#sacco-district').val(saccoData.LocID).trigger('change');;
+        $('#sacco-address').text(saccoData.SaccoAddress);
+        $('#sacco-description').text(saccoData.SaccoDescription)
+
+        if(currentElement.hasClass('edit-sacco')){
+          $('#exec-mode').val("edit");
+          $('#sacco-action').text('Edit');
+          $('#save-sacco').show();
+          //make all fileds editable
+          $('#sacco-form :input').prop('disabled', false);
+        }else{
+            $('#sacco-action').text('View');
+            $('#sacco-form :input').prop('disabled', true); 
+            $('#save-sacco').hide();            
+        }           
+      })
+})
+
+$('.get-sacco-member, .edit-sacco-member').click(function(e){
+  e.preventDefault();
+  let form = $('#sacco-member-form');
+  let currentElement = $(this);
+  let memberID = $(this).data('member-id');
+  let entiyID = $(this).data('entity-id');
+  let entityType = "S";
+  let url = $(this).data('link');
+  let data = { entity_id: entiyID, entity_type: entityType, member_id: memberID };
+  form.trigger("reset");
+  
+  getLinkData(url, data, "Fetching data...")
+    .then((response) => {
+        console.log("Success:", response);
+        memberData = response.data;
+        $("#sacco-member-id").val(memberData.SaccoMemberID);
+        $('#entity-id').val(memberData.SaccoID);
+        $('#entity-type').val(entityType);
+        $('#photo').attr('src', `<?php echo base_url('assets/images/sacco-members/'); ?>${memberData.MemberPhoto}`);
+        $('#member-id-number').val(memberData.MemberIDNumber);
+        $('#id-type').val(memberData.MemberIDType)
+        $('#first-name').val(memberData.MemberFirstName);
+        $('#last-name').val(memberData.MemberLastName);
+        $('#member-email').val(memberData.MemberEmail);
+        $('#member-phone-number').val(memberData.MemberPhoneNumber);
+        $('#member-status').val(memberData.MemberStatus);
+        $('#member-address').val(memberData.MemberAddress);
+        $('#date-of-birth').val(memberData.MemberDoB);
+        $('#member-occupation').val(memberData.Occupation);
+        $('#member-nok-name').val(memberData.NextOfKin);
+        $('#nok-relationship').val(memberData.Relation);
+        $('#member-nok-phone-number').val(memberData.KinPhone);
+        $('#member-nok-phone-number').val(memberData.KinPhone);
+        $('#member-nok-address').val(memberData.KinAddress);
+        if(memberData.Gender == 'Male'){
+          $('#radioMale').prop("checked", true);
+        }else if(memberData.Gender == 'Female'){
+          $('#radioFemale').prop("checked", true);
+        }
+
+        if(currentElement.hasClass('edit-member')){
+          $('#exec-mode').val("edit");
+          $('#spn-sacco-exc-mode').text('Edit');
+          $('#save-sacco-member').show();
+          //make all fileds editable
+          $('#sacco-member-form :input').prop('disabled', false);
+        }else{
+            $('#spn-sacco-exc-mode').text('View');
+            $('#sacco-member-form :input').prop('disabled', true); 
+            $('#save-sacco-member').hide();            
+        }           
+    })
+    .catch((error) => {
+        console.log("Failed:", error);      
+    });
+});
+
 function getLinkData(url, data, msg) {
     toastr.info(msg);
 
@@ -1314,8 +1499,6 @@ function getLinkData(url, data, msg) {
         });
     });
 }
-
-
 
 
 function db_submit(resTarget,formSubmited,sendMsg){
@@ -1495,6 +1678,17 @@ $('#print-report').click(function(){
     console.log('attempting printing',elm)
     print_elm(elm)
 })
+
+$(document).on('shown.bs.modal', function (event) {
+    // Target all select2 elements inside the modal being shown
+    const modal = $(event.target); // The modal that triggered the event
+    modal.find('select.select2').each(function () {
+        $(this).select2({
+            width: '100%', // Ensure the dropdown adjusts to the modal width
+            dropdownParent: modal // Attach the dropdown to the modal to prevent z-index issues
+        });
+    });
+});
 
 
 

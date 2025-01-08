@@ -5,6 +5,7 @@ use App\Models\GroupModel;
 use App\Models\GroupMemberModel;
 use App\Models\SaccoModel;
 use App\Models\SaccoMembersModel;
+use App\Models\IdentificationTypesModel as idTypesModel;
 
 class Entities extends BaseController{
     protected $user;
@@ -47,7 +48,6 @@ class Entities extends BaseController{
         ];
 
 
-
         if(!$this->validate($rules, $messages)){
             $messages = $this->validator->getErrors();
             $errorsMessages = nl2br(esc(implode("\n", $messages))) ;
@@ -59,7 +59,7 @@ class Entities extends BaseController{
             return json_encode($data);   
         }
 
-        $execMode = $this->request->getPost('execMode');
+        $execMode = $this->request->getPost('exec-mode');
         $responseMessage =[];
         $execute = null;
         $addGroup = true;
@@ -81,9 +81,7 @@ class Entities extends BaseController{
             $data['CreatedAt'] = date('Y-m-d H:i:s');
             $data['CreatedBy'] = $this->user['UserId'];
             $execute = $this->group->insert($data);
-        }
-
-        
+        }        
 
         if(!$execute){
             $message = ($addGroup) ? 'Failed to add group ' : 'Failed to update group ';
@@ -165,99 +163,168 @@ class Entities extends BaseController{
         return json_encode($data);
     }  
 
-    public function SaccoIndex(){
+    public function saccoIndex(){
         $sacco = new SaccoModel();
-        $data['title'] = 'Saccos';
-        $data['page'] = 'Sacco Listing';
-        $data['saccos'] = $sacco->findAll();
-
+        $data = [
+            'title' => 'Saccos',
+            'page' => 'Sacco Listing',
+            'saccos' => $sacco->findAll(),        
+            'districts' => $this->district->getDistricts(),
+        ];
         return view('entities/saccos', $data);
     }
 
-    public function addSacco(){
-        $data = [
-            'SaccoName' => $this->request->getPost('sacco-name'),
-            'SaccoDescription' => $this->request->getPost('sacco-description'),
-            'SaccoStatus' => $this->request->getPost('sacco-status'),
-            'LocType' => $this->request->getPost('loc-type'),
-            'LocID' => $this->request->getPost('loc-id'),
-            'CreatedAt' => date('Y-m-d H:i:s'),
-            'CreatedBy' => $this->user['UserId']
-        ];
-
-        $rules = [
-            'sacco-name' => 'required',
-            'sacco-description' => 'required',
-            'sacco-status' => 'required',
-            'loc-type' => 'required',
-            'loc-id' => 'required'
-        ];
-
-        $messages = [
-            'sacco-name' => [
-                'required' => 'Please provide a Sacco Name'
-            ],
-            'sacco-description' => [
-                'required' => 'Sacco Description is mandatory'
-            ],
-            'sacco-status' => [
-                'required' => 'Specify Sacco Status'
-            ],
-            'loc-type' => [
-                'required' => 'Location Type is not Selected'
-            ],
-            'loc-id' => [
-                'required' => 'Location is not elected'
-            ]
-        ];
-
-        if(!$this->validate($rules, $messages)){
-            $messages = $this->validator->getErrors();
-            $errorsMessages = nl2br(esc(implode("\n", $messages))) ;
+    public function saveSacco(){
+        try{
+            $sacco = new SaccoModel();
+            $execMode = $this->request->getPost('exec-mode');
             $data = [
+                'SaccoDescription' => $this->request->getPost('sacco-description'),
+                'SaccoStatus' => $this->request->getPost('sacco-status'),
+                'LocType' => 'District',
+                'LocID' => $this->request->getPost('sacco-district'),
+                'Email' => $this->request->getPost('sacco-email'),
+                'Phone' => $this->request->getPost('sacco-phone'),
+                'SaccoAddress' => $this->request->getPost('sacco-address'),
+            ];
+
+
+            if ($execMode == 'edit') {
+                $data['SaccoID'] = $this->request->getPost('sacco-id');
+                $data['UpdatedAt'] = date('Y-m-d H:i:s');
+                $data['LastUpdateBy'] = $this->user['UserId'];
+                $saccoUpdate = $sacco->update($data['SaccoID'], $data);
+                //get update statement
+                $statement = $sacco->db->getLastQuery();
+                log_message('info', $statement);
+                if(!$saccoUpdate){
+                    $updateError = implode(', ', $sacco->errors());
+                    $error = "Error Updating Sacco: ".$data['SaccoID']." - ". $data['SaccoName']."\n".$updateError;
+                    log_message('error', $error);
+                    throw new \Exception($error);                    
+                }
+                $returnData = [
+                    'status'=>'success',
+                    'message' => "<h6>Execution Successful</h6> Sacco Modified Successfully",
+                    'data' => $data,
+                    'redirect' => base_url('entities/saccos')
+                ]; 
+                return json_encode($returnData);
+            }            
+            if($execMode == 'add'){
+                $data['SaccoName'] = $this->request->getPost('sacco-name');                
+                $data['CreatedAt'] = date('Y-m-d H:i:s');
+                $data['CreatedBy'] = $this->user['UserId'];
+            }
+
+            if(!$sacco->validate($data)){
+                $messages = $sacco->errors();
+                $errorsMessages = nl2br(esc(implode("\n", $messages))) ;
+                $data = [
+                    'status'=> 'error',
+                    'message' => "<h6><strong>Validation Failed!</strong></h6> \n".$errorsMessages,
+                    'data' => []
+                ]; 
+                return json_encode($data);   
+            } 
+            $sacco->insert($data);
+            $returnData = [
+                'status'=> 'success',
+                'message' => "<h6>Execution Successful</h6> Sacco added successfully",
+                'data' => $data,
+                'redirect' => base_url('entities/saccos')
+            ]; 
+            return json_encode($returnData);            
+        } catch (\Exception $e) {
+            $returnData = [
                 'status'=> 'error',
-                'message' => "<h6><strong>Validation Failed!</strong></h6> \n".$errorsMessages,
+                'message' => $e->getMessage(),
+                'data' => $data
+            ]; 
+            return json_encode($returnData);
+        }
+
+    }
+
+    public function getSacco(){
+        $sacco = new SaccoModel();
+        try {
+            $saccoId = $this->request->getPost('sacco');
+            $saccoData = $sacco->where('SaccoID', $saccoId)->first();
+            $data = [
+                'status'=> 'success',
+                'message' => "Data Fetch Sucessfull",
+                'data' => $saccoData
+            ];
+            return json_encode($data);
+        } catch (\Execption $e) {
+            $returnData = [
+                'status'=> 'error',
+                'message' => $e->getMessage(),
                 'data' => []
             ]; 
-            return json_encode($data);   
-        }   
+            return json_encode($returnData);
+        }
+    }
 
-        $sacco = new SaccoModel();
-        $sacco->insert($data);
-        $data = [
-            'status'=> 'success',
-            'message' => "<h6>Execution Successful</h6> Sacco added successfully",
-            'data' => $data,
-            'redirect' => base_url('entities/saccos')
-        ]; 
-        return json_encode($data);
+    public function getGroup(){
+        $group = new GroupModel();
+        try {
+            $groupId = $this->request->getPost('group');
+            $groupData = $group->where('GroupID', $groupId)->first();
+            $returnData = [
+                'status'=> 'success',
+                'message' => "Data Fetch Sucessfull",
+                'data' => $groupData
+            ];
+            return json_encode($returnData);
+        } catch (\Execption $e) {
+            $error = $e->getMessage();
+            $returnData = [
+                'status'=> 'error',
+                'message' => $error,
+                'data' => []
+            ];
+            return json_encode($returnData);
+        }
     }
 
     public function changeSaccoStatus(){
-
-        $data = [
-            'SaccoID' => $this->request->getPost('sacco-id'),
-            'SaccoStatus' => $this->request->getPost('sacco-status')
-        ];
-
-        $sacco = new SaccoModel();
-        $statusUpdate = $sacco->update($data['SaccoID'], $data);
-        if(!$statusUpdate){
+        try {
+                $saccoId = $this->request->getPost('saccos-id');
+                $newStatus = $this->request->getPost('sacco-new-status');
+                $oldStatus = $this->request->getPost('sacco-status');
+                $data = [
+                    'SaccoID' => $saccoId ,
+                    'SaccoStatus' => $newStatus
+                ];
+        
+                $sacco = new SaccoModel();
+                $statusUpdate = $sacco->update($data['SaccoID'], $data);
+                if(!$statusUpdate){
+                    $data = [
+                        'status'=> 'error',
+                        'message' => "<h6>Failed to change Sacco status</h6> \n". $sacco->errors(),
+                        'data' => []
+                    ]; 
+                    return json_encode($data);   
+                }
+        
+                $data = [
+                    'status'=> 'success',
+                    'message' => "<h6>Execution Successful</h6> Sacco status changed from $oldStatus to $newStatus successfully",
+                    'data' => $data,
+                    'redirect' => base_url('entities/saccos')
+                ]; 
+                return json_encode($data);
+        } catch (\Exception $e) {
             $data = [
                 'status'=> 'error',
-                'message' => "<h6>Failed to change Sacco status</h6> \n". $sacco->errors(),
+                'message' => $e->getMessage(),
                 'data' => []
             ]; 
-            return json_encode($data);   
+            return json_encode($data);
         }
-
-        $data = [
-            'status'=> 'success',
-            'message' => "<h6>Execution Successful</h6> Sacco status changed successfully",
-            'data' => $data,
-            'redirect' => base_url('entities/saccos')
-        ]; 
-        return json_encode($data);
     }
         
 
@@ -265,7 +332,11 @@ class Entities extends BaseController{
     public function getMembers(){
         $entityType = $this->request->uri->getSegment(3);
         $entityId = $this->request->uri->getSegment(4);
-        $data= [];
+        $idTypes = new idTypesModel();
+        $types = $idTypes->findAll();
+        $data= [
+            'idTypes'=>$types
+        ];
 
         if($entityType == 'G'){
             $member = new GroupMemberModel();
@@ -276,6 +347,8 @@ class Entities extends BaseController{
 
         if($entityType == 'S'){
             $member = new SaccoMembersModel();
+            $sacco = new SaccoModel();
+            $data['sacco'] = $sacco->where('SaccoID', $entityId)->first();
             $data['members'] = $member->where('SaccoID', $entityId)->findAll();
         }
         $entityTypeList = ['G'=>'Group', 'S'=>'Sacco'];
@@ -285,299 +358,433 @@ class Entities extends BaseController{
         return view('entities/members', $data);
     }
 
-    public function memberExists($memberId, $entityId, $entityType){
-        try{
+    public function memberExists($memberId, $email, $entityId, $entityType)
+    {
+        try {
+            log_message('info', "Checking if member exists with EntityType: $entityType, EntityId: $entityId");
+    
             $memberPresent = null;
-            if($entityType == 'G'){
+    
+            if ($entityType === 'G') {
+                log_message('info', 'Using GroupMemberModel');
                 $member = new GroupMemberModel();
-                $memberPresent = $this->member->where('GroupID', $entityId)->where('MemberID', $memberId)->first();        
+    
+                // Check for a member in the group by memberId or email
+                $memberPresent = $member->where('GroupID', $entityId)
+                                        ->groupStart()
+                                        ->where('GroupMemberID', $memberId)
+                                        ->orWhere('MemberEmail', $email)
+                                        ->groupEnd()
+                                        ->first();
+    
+                log_message('debug', 'Group Member Query: ' . $member->getLastQuery());
             }
-
-            if($entityType == 'S'){
+    
+            if ($entityType === 'S') {
+                log_message('info', 'Using SaccoMembersModel');
                 $member = new SaccoMembersModel();
-                $memberPresent = $this->member->where('SaccoID', $entityId)->where('MemberID', $memberId)->first();
+    
+                // Check for a member in the sacco by memberId or email
+                $memberPresent = $member->where('SaccoID', $entityId)
+                                        ->groupStart()
+                                        ->where('MemberID', $memberId)
+                                        ->orWhere('Email', $email)
+                                        ->groupEnd()
+                                        ->first();
+    
+                log_message('debug', 'Sacco Member Query: ' . $member->getLastQuery());
             }
-            //if member Present has one record
-            if($memberPresent->count() > 0){
+    
+            if ($memberPresent) {
+                log_message('info', 'Member found');
                 return true;
             }
-            return false;            
+    
+            log_message('info', 'Member not found');
+            return false;
         } catch (\Exception $e) {
-            log_message('error', $e->getMessage());
+            log_message('error', 'Error in memberExists: ' . $e->getMessage() . ' at line ' . $e->getLine());
             return false;
         }
-
     }
+    
 
     public function saveMember(){
-        try
-        {
+        try {
+            log_message('debug', 'Entering saveMember function.');
+
             $entityId = $this->request->getPost('entity-id');
             $entityType = $this->request->getPost('entity-type');
             $execMode = $this->request->getPost('exec-mode');
+            $idType = $this->request->getPost('id-type');
             $execMessages = null;
 
-            if(!$this->request->getFile('member-photo') && $execMode != 'edit'){
+            log_message('debug', 'entityId: ' . $entityId . ', entityType: ' . $entityType . ', execMode: ' . $execMode);
+
+            if (!$this->request->getFile('member-photo') && $execMode != 'edit') {
+                log_message('error', 'Missing Member Photo on non-edit mode.');
                 $data = [
-                    'status'=> 'error',
-                    'message' => "<h6>Failed to add member</h6> \n Please take/upload Member Photo!",
+                    'status' => 'error',
+                    'message' => "<h6>Missing Info!</h6> \n Please take/upload Member Photo!",
                     'data' => [
                         $this->request->getPost()
                     ]
-                ]; 
-                return json_encode($data);   
+                ];
+                return json_encode($data);
             }
-                
-                $memberPresent = $this->memberExists($this->request->getPost('member-id'), $entityId, $entityType);
-        
-                if($execMode != 'edit'){
-                    if($memberPresent){
-                        $execMessages = "<h6>Member ID already exists</h6> \n Member ID already exists";
-                        $data = [
-                            'status'=> 'error',
-                            'message' => $execMessages,
-                            'data' => []
-                        ]; 
-                        return json_encode($data);   
-                    }
+
+
+            // Member photo upload
+            $newName = null;
+            $file = $this->request->getFile('member-photo');  
+
+            $path = ($entityType == 'G') ? GROUP_MEMBER_PATH : SACCO_MEMBER_PATH;
+            log_message('debug', 'File: ' . $file . ', ExecMode: ' . $execMode . ', Path: ' . $path);
+            if($execMode == 'add' || ($execMode =='edit' && $file->getName())){ 
+
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/bmp', 'image/webp'];
+                if (!in_array($file->getMimeType(), $allowedTypes)) {
+                    log_message('error', 'Invalid file type: ' . $file->getMimeType());
+                    $data = [
+                        'status' => 'error',
+                        'message' => "<h6>Invalid File Type!</h6> \n Please select a valid image file.",
+                        'data' => [
+                            'File Type' => $file->getMimeType()
+                        ]
+                        ];
+                    return json_encode($data);
                 }
-        
-                if($entityType == 'G'){
-                    $rules = [
-                        'id-number' => 'required',
-                        'group-member-status' => 'required',
-                        'group-member-first-name' => 'required',
-                        'group-member-last-name' => 'required',
-                        'group-member-gender' => 'required',
-                        'group-member-email' => 'required',
-                        'group-member-telephone' => 'required',
-                        'entity-id' => 'required'             
-                    ];
-        
-                    $messages = [
-                        'id-number' => [
-                            'required' => 'Member ID Number is required'
-                        ],
-                        'group-member-status' => [
-                            'required' => 'Member Status is not set'
-                        ],
-                        'group-member-first-name' => [
-                            'required' => 'Member First Name is required'
-                        ],
-                        'group-member-last-name' => [
-                            'required' => 'Member Last Name is required'
-                        ],
-                        'group-member-gender' => [
-                            'required' => 'Member Gender is required'
-                        ],
-                        'group-member-email' => [
-                            'required' => 'Member Email is required'
-                        ],
-                        'group-member-telephone' => [
-                            'required' => 'Member Phone Number is required'
-                        ],
-                        'entity-id' => [
-                            'required' => 'Group ID is not set'
-                        ],
-                        'member-role' => [
-                            'required' => 'Member Role is required'
+
+                if ($file->isValid() && !$file->hasMoved()) {
+                    $newName = $file->getRandomName();
+                    if(!$file->move($path, $newName)){
+                        log_message('error', 'Error Uploading file to destination: ' . $path . $newName);
+                        $data = [
+                            'status' => 'error',
+                            'message' => "<h6>Member Photo Upload Error!</h6> \n Please try again",
+                            'data' => ['Destination' => $path]
+                        ];
+                        return json_encode($data);
+                    }
+                    log_message('debug', 'Uploaded file moved to ' . $path . $newName);
+                }                
+            }
+
+            $memberId = ($entityType == 'S') ? $this->request->getPost('member-id'): $this->request->getPost('id-number');
+
+            $memberEmail = ($entityType == 'S') ? $this->request->getPost('member-email'): $this->request->getPost('group-member-email');
+
+            $memberPresent = $this->memberExists($memberId,$memberEmail, $entityId, $entityType);
+            log_message('debug', "Member present? " . ($memberPresent ? 'Yes' : 'No'));
+
+            if ($execMode != 'edit' && $memberPresent) {
+                log_message('error', 'Member ID already exists.');
+                $execMessages = "<h6>Member ID already exists</h6> \n Member with the same ID  or Email already exists";
+                $data = [
+                    'status' => 'error',
+                    'message' => $execMessages,
+                    'data' => []
+                ];
+                return json_encode($data);
+            }
+
+            if ($entityType == 'G') {
+                $rules = [
+                    'id-number' => 'required',
+                    'group-member-status' => 'required',
+                    'group-member-first-name' => 'required',
+                    'group-member-last-name' => 'required',
+                    'group-member-gender' => 'required',
+                    'group-member-email' => 'required',
+                    'group-member-telephone' => 'required',
+                    'entity-id' => 'required'
+                ];
+
+                $messages = [
+                    'id-number' => [
+                        'required' => 'Member ID Number is required'
+                    ],
+                    'group-member-status' => [
+                        'required' => 'Member Status is not set'
+                    ],
+                    'group-member-first-name' => [
+                        'required' => 'Member First Name is required'
+                    ],
+                    'group-member-last-name' => [
+                        'required' => 'Member Last Name is required'
+                    ],
+                    'group-member-gender' => [
+                        'required' => 'Member Gender is required'
+                    ],
+                    'group-member-email' => [
+                        'required' => 'Member Email is required'
+                    ],
+                    'group-member-telephone' => [
+                        'required' => 'Member Phone Number is required'
+                    ],
+                    'entity-id' => [
+                        'required' => 'Group ID is not set'
+                    ],
+                    'member-role' => [
+                        'required' => 'Member Role is required'
+                    ]
+                ];
+
+                if (!$this->validate($rules, $messages)) {
+                    log_message('error', 'Validation failed: ' . json_encode($this->validator->getErrors()));
+                    $data = [
+                        'status' => 'error',
+                        'message' => "<h6>Failed to add member</h6> \n" . $this->validator->listErrors(),
+                        'data' => [
+                            $this->request->getPost()
                         ]
                     ];
-        
-                    if(!$this->validate($rules, $messages)){
-                        $data = [
-                            'status'=> 'error',
-                            'message' => "<h6>Failed to add member</h6> \n". $this->validator->listErrors(),
-                            'data' => [
-                                $this->request->getPost()
-                            ]
-                        ]; 
-                        return json_encode($data);   
-                    }
+                    return json_encode($data);
+                }
 
-                    //member photo upload
-                    $newName = null;
-                    //check whether file is not present in payload                   
-                    $file = $this->request->getFile('member-photo');
-                    if ($file->isValid() && !$file->hasMoved()) {
-                        //compress image save space but maintain quality
-                    
-                        $newName = $file->getRandomName();
-                        $file->move(ROOTPATH . 'public/assets/images/group-members', $newName);
-                    }
-        
-                    $data = [
-                        'MemberID' => $this->request->getPost('id-number'),
-                        'GroupMemberStatus' => $this->request->getPost('group-member-status'),
-                        'MemberName' => $this->request->getPost('group-member-first-name').' '.$this->request->getPost('group-member-last-name'),
-                        'MemberEmail' => $this->request->getPost('group-member-email'),
-                        'MemberGender' => $this->request->getPost('group-member-gender'),
-                        'MemberPhoneNumber' => $this->request->getPost('group-member-telephone'),
-                        'MemberDob' => $this->request->getPost('group-member-dob'),
-                        'memberAddress' => $this->request->getPost('group-member-address'),
-                        'GroupID' => $this->request->getPost('entity-id'),
-                        'CreatedAt' => date('Y-m-d H:i:s'),
-                        'CreatedBy' => $this->user['UserId']
-                    ];
-                    if($execMode == 'add'){
+                $data = [
+                    'MemberID' => $this->request->getPost('id-number'),
+                    'GroupMemberStatus' => $this->request->getPost('group-member-status'),
+                    'MemberName' => $this->request->getPost('group-member-first-name') . ' ' . $this->request->getPost('group-member-last-name'),
+                    'MemberEmail' => $this->request->getPost('group-member-email'),
+                    'MemberGender' => $this->request->getPost('group-member-gender'),
+                    'MemberPhoneNumber' => $this->request->getPost('group-member-telephone'),
+                    'MemberDob' => $this->request->getPost('group-member-dob'),
+                    'memberAddress' => $this->request->getPost('group-member-address'),
+                    'GroupID' => $this->request->getPost('entity-id'),
+                    'CreatedAt' => date('Y-m-d H:i:s'),
+                    'CreatedBy' => $this->user['UserId']
+                ];
+                if ($execMode == 'add') {
+                    $data['MemberPhoto'] = $newName;
+                }
+
+                if ($execMode == 'edit') {
+                    $data['GroupMemberID'] = $this->request->getPost('group-member-id');
+                    if ($newName) {
                         $data['MemberPhoto'] = $newName;
                     }
 
-                    if($execMode == 'edit'){
-                        //if photo was uploaded add it to the data array
-                        $data['GroupMemberID'] = $this->request->getPost('group-member-id');
-                        if($newName){
-                            $data['MemberPhoto'] = $newName;
-                        }
-                        
-                        $data['UpdatedAt'] = date('Y-m-d H:i:s');
-                        $data['UpdatedBy'] = $this->user['UserId'];
-                    }
-                    $member = new GroupMemberModel();   
-                    $execute = $member->save($data);
-                    if(!$execute){
-                        $data = [
-                            'status'=> 'error',
-                            'message' => "<h6>Failed to Save Member Details</h6> \n". $member->errors(),
-                            'data' => []
-                        ]; 
-                        return json_encode($data);   
-                    }
-        
-                    if($execMode == 'edit'){
-                        $execMessages = "<h6>Execution Successful</h6> Member Details updated successfully";
-                    }
-        
-                    $execMessages = "<h6>Execution Successful</h6> Group Member added successfully";
-        
-                    $data = [
-                        'status'=> 'success',
-                        'message' => $execMessages,
-                        'data' => $data,
-                        'redirect' => base_url('entities/members/'.$entityType.'/'.$entityId)
-                    ]; 
-                    return json_encode($data);
+                    $data['UpdatedAt'] = date('Y-m-d H:i:s');
+                    $data['UpdatedBy'] = $this->user['UserId'];
                 }
-        
-                if($entityType == 'S'){
-                    $rules = [
-                        'member-id' => 'required',
-                        'member-status' => 'required',
-                        'member-first-name' => 'required',
-                        'member-last-name' => 'required',
-                        'member-email' => 'required',
-                        'member-status' => 'required',
-                        'member-phone' => 'required',
-                        'member-occupation' => 'required',
-                        'member-photo' => 'required',
-                        'entity-id' => 'required',
-                        'member-role' => 'required'                
+                
+                $member = new GroupMemberModel();
+
+                $execute = $member->save($data);
+                if (!$execute) {
+                    log_message('error', 'Failed to save member details: ' . json_encode($member->errors()));
+                    $returnData = [
+                        'status' => 'error',
+                        'message' => "<h6>Failed to Save Member Details</h6> \n" . $member->errors(),
+                        'data' => $data
                     ];
-        
-                    $messages = [
-                        'member-id' => [
-                            'required' => 'Member ID is required'
-                        ],
-                        'member-status' => [
-                            'required' => 'Member Status is not set'
-                        ],
-                        'member-first-name' => [
-                            'required' => 'Member First Name is required'
-                        ],
-                        'member-last-name' => [
-                            'required' => 'Member Last Name is required'
-                        ],
-                        'member-email' => [
-                            'required' => 'Member Email is required'
-                        ],
-                        'member-status' => [
-                            'required' => 'Member Status is not set'
-                        ],
-                        'member-phone' => [
-                            'required' => 'Member Phone Number is required'
-                        ],
-                        'member-occupation' => [
-                            'required' => 'Member Occupation is required'
-                        ],
-                        'member-photo' => [
-                            'required' => 'Upload a Member Photo'
-                        ],
-                        'entity-id' => [
-                            'required' => 'Group ID is not set'
-                        ],
-                        'member-role' => [
-                            'required' => 'Member Role is required'
-                        ]
-                    ];
-        
-                    if(!$this->validate($rules, $messages)){
-                        $data = [
-                            'status'=> 'error',
-                            'message' => "<h6>Failed to add member</h6> \n". $this->validator->listErrors(),
-                            'data' => []
-                        ]; 
-                        return json_encode($data);   
-                    }
-        
-                    //get member photo
-                    $photo = $this->request->getFile('member-photo');
-                    if($photo->isValid() && !$photo->hasMoved()){
-                        $photoName = $photo->getRandomName();
-                        $photo->move('assets/images/sacco-members', $photoName);
-                        $photo = $photoName;
-                    }
-        
-                    $data = [
-                        'MemberID' => $this->request->getPost('member-id'),
-                        'MemberIDType' =>  $this->request->getPost('member-id-type'),
-                        'MemberStatus' => $this->request->getPost('member-status'),
-                        'MemberFirstName' => $this->request->getPost('member-first-name'),
-                        'MemberLastName' => $this->request->getPost('member-last-name'),
-                        'MemberEmail' => $this->request->getPost('member-email'),
-                        'MemberPhoneNumber' => $this->request->getPost('member-phone'),
-                        'MemberOccupation' => $this->request->getPost('member-occupation'),
-                        'MemberPhoto' => $photo,
-                        'SaccoID' => $this->request->getPost('sacco-id'),
-                        'CreatedAt' => date('Y-m-d H:i:s'),
-                        'CreatedBy' => $this->user['UserId']
-                    ];
-        
-                    if($execMode == 'edit'){
-                        $data['SaccoMemberID'] = $this->request->getPost('sacco-member-id');
-                        $data['UpdatedAt'] = date('Y-m-d H:i:s');
-                    }
-        
-                    $member = new GroupMemberModel();
-                    $execute = $member->save($data);
-                    if(!$execute){
-                        $data = [
-                            'status'=> 'error',
-                            'message' => "<h6>Failed to Save Member Details</h6> \n". $member->errors(),
-                            'data' => []
-                        ]; 
-                        return json_encode($data);   
-                    }
-        
-                    $execMessages =($execMode == 'add')? "<h6>Execution Successful</h6> Member added successfully": "<h6>Execution Successful</h6> Member updated successfully";
-        
-                    $data = [
-                        'status'=> 'success',
-                        'message' => $execMessages,
-                        'data' => $data,
-                        'redirect' => base_url('entities/members/'.$entityType.'/'.$entityId)
-                    ]; 
-                    return json_encode($data);
+                    return json_encode($returnData);
                 }
-        
-            } catch (\Exception $e) {
-            $data = [
-                'status'=> 'error',
-                'message' => "<h6>Failed to add member</h6> \n". $e->getMessage(),
-                'data' => []
-            ]; 
-            return json_encode($data);   
+
+                $execMessages = ($execMode == 'edit') ? "<h6>Execution Successful</h6> Member Details updated successfully" : "<h6>Execution Successful</h6> Group Member added successfully";
+
+                $returnData = [
+                    'status' => 'success',
+                    'message' => $execMessages,
+                    'data' => $data,
+                    'redirect' => base_url('entities/get-members/' . $entityType . '/' . $entityId)
+                ];
+                return json_encode($returnData);
+            }
+
+            if ($entityType == 'S') {
+                $member = new SaccoMembersModel();
+
+                $data = [
+                    'MemberIDNumber' => $this->request->getPost('member-id-number'),
+                    'MemberIDType' => $idType,
+                    'MemberStatus' => $this->request->getPost('member-status'),
+                    'MemberFirstName' => $this->request->getPost('first-name'),
+                    'MemberLastName' => $this->request->getPost('last-name'),
+                    'MemberEmail' => $this->request->getPost('member-email'),
+                    'MemberPhoneNumber' => $this->request->getPost('member-phone-number'),
+                    'Gender' => $this->request->getPost('gender'),
+                    'MemberDoB' =>  date('Y-m-d', strtotime($this->request->getPost('date-of-birth'))),
+                    'Occupation' => $this->request->getPost('member-occupation'),
+                    'MemberAddress' => $this->request->getPost('member-address'),
+                    'NextOfKin' => $this->request->getPost('member-nok-name'),
+                    'Relation' => $this->request->getPost('nok-relationship'),
+                    'KinPhone' => $this->request->getPost('member-nok-phone-number'),
+                    'KinAddress' => $this->request->getPost('member-nok-address'),
+                    'SaccoID' => $this->request->getPost('entity-id'),
+                ];
+
+                if ($execMode == 'add') {
+                    $data['MemberPhoto'] = $newName;
+                    $data['CreatedAt'] = date('Y-m-d H:i:s');
+                    $data['CreatedBy'] = $this->user['UserId'];
+                }
+
+                log_message('debug', 'Data: ' . json_encode($data));
+
+                if (!$member->validate($data)) {
+                    log_message('error', 'Validation failed for Sacco member: ' . json_encode($member->errors()));
+                    $messages = $member->errors();
+                    $errorsMessages = nl2br(esc(implode("\n", $messages)));
+                    $returnData = [
+                        'status' => 'error',
+                        'message' => "<h6>Failed to add member</h6> \n" . $errorsMessages,
+                        'data' => $data
+                    ];
+                    return json_encode($returnData);
+                }
+
+                if ($execMode == 'edit') {
+                    if ($newName) {
+                        $data['MemberPhoto'] = $newName;
+                    }
+                    $data['SaccoMemberID'] = $this->request->getPost('sacco-member-id');
+                    $data['UpdatedAt'] = date('Y-m-d H:i:s');
+                    $data['lastUpdatedBy'] = $this->user['UserId'];
+                }
+
+                $data['CreatedAt'] = date('Y-m-d H:i:s');
+                $data['CreatedBy'] = $this->user['UserId'];
+
+                $execute = $member->save($data);
+                if (!$execute) {
+                    $errorsMessages = nl2br(esc(implode("\n", $member->errors())));
+                    log_message('error', 'Failed to save Sacco member details: ' . json_encode($member->errors()));
+                    $returnData = [
+                        'status' => 'error',
+                        'message' => "<h6>Failed to Save Member Details</h6> \n" . $errorsMessages,
+                        'data' => json_encode($data)
+                    ];
+                    return json_encode($returnData);
+                }
+
+                $execMessages = ($execMode == 'add') ? "<h6>Execution Successful</h6> Member added successfully" : "<h6>Execution Successful</h6> Member updated successfully";
+
+                $returnData = [
+                    'status' => 'success',
+                    'message' => $execMessages,
+                    'data' => $data,
+                    'redirect' => base_url('entities/get-members/' . $entityType . '/' . $entityId)
+                ];
+                return json_encode($returnData);
+            }
+
+        } catch (\Exception $e) {
+            log_message('error', 'Exception in saveMember: ' . $e->getMessage().'on line '.$e->getLine());
+            $returnData = [
+                'status' => 'error',
+                'message' => "<h6>Failed to add member</h6> \n" . $e->getMessage(),
+                'data' => $this->request->getPost()
+            ];
+            return json_encode($returnData);
         }
     }
+
+    public function changeMemberStatus(){
+        $memberId = $this->request->getPost('member-id');
+        $entityType = $this->request->getPost('entity-type');
+        $entityId = $this->request->getPost('entity-id');
+        $memberStatus = $this->request->getPost('new-status');
+        $updateMember = $this->updateMember($entityType, $entityId, $memberId, $memberStatus);
+        if($updateMember){
+            $returnData = [
+                'status' => 'success',
+                'message' => "<h6>Execution Successful</h6> Member status updated successfully",
+                'redirect' => base_url('entities/get-members/' . $entityType . '/' . $entityId)
+            ];
+            return json_encode($returnData);
+        }else{
+            $returnData = [
+                'status' => 'error',
+                'message' => "<h6>Failed to update member status</h6>",
+                'redirect' => base_url('entities/get-members/' . $entityType . '/' . $entityId)
+            ];
+            return json_encode($returnData);
+        }
+    }
+
+    public function updateMember($entityType, $entityId, $memberId, $memberStatus)
+    {
+        try {
+            log_message('info', "Starting updateMember with EntityType: $entityType, EntityId: $entityId, MemberId: $memberId, MemberStatus: $memberStatus");
+
+            $model = null;
+    
+            if ($entityType === 'G') {
+                log_message('info', 'Using GroupMemberModel');
+                $model = new GroupMemberModel();
+                $entityField = 'GroupID';
+                $memberField = 'GroupMemberID';
+                $statusField = 'GroupMemberStatus';
+                $updateByField = 'LastUpdatedBy';
+                $modifyDateField = 'UpdatedAt'; 
+                $deleteField = 'Deleted';
+                $deletedByField = 'DeletedBy';
+                $deletedAtField = 'DeletedAt';   
+
+            } elseif ($entityType === 'S') {
+                log_message('info', 'Using SaccoMembersModel');
+                $model = new SaccoMembersModel();
+                $entityField = 'SaccoID';
+                $memberField = 'SaccoMemberID';
+                $statusField = 'MemberStatus';
+                $updateByField = 'lastUpdatedBy';
+                $modifyDateField = 'UpdatedAt'; 
+                $deleteField = 'Deleted';
+                $deletedByField = 'DeletedBy';
+                $deletedAtField = 'DeletedAt';                  
+            } else {
+                $error = "Invalid entity type: $entityType";
+                log_message('error', $error);
+                throw new \Exception($error);
+            }
+    
+            log_message('info', "Finding member with EntityField: $entityField, EntityId: $entityId, MemberField: $memberField, MemberId: $memberId");
+            $member = $model->where($entityField, $entityId)
+                            ->where($memberField, $memberId)
+                            ->first();
+    
+            if (!$member) {
+                $error = "Member not found for Entity ID: $entityId and Member ID: $memberId";
+                log_message('error', $error);
+                throw new \Exception($error);
+            }
+
+            if($memberStatus == 'Deleted'){
+                $member->{$deleteField} = 1;
+                $member->{$deletedByField} = $this->user['UserId'];
+                $member->{$deletedAtField} = date('Y-m-d H:i:s');
+                if (!$model->update($member->$memberField, (array)$member)) {
+                    $sqlError = json_encode($model->errors());
+                    $error = "Failed to delete member $sqlError";
+                    log_message('error', $error);
+                    throw new \Exception($error);
+                }
+                log_message('info', "Successfully deleted member for MemberId: $memberId");
+                return true;
+            }
+    
+            log_message('info', "Updating status for MemberId: $memberId");
+            $member->{$statusField} = $memberStatus;
+            $member->{$updateByField} = $this->user['UserId'];
+            $member->{$modifyDateField} = date('Y-m-d H:i:s');
+    
+            if (!$model->update($member->$memberField, (array)$member)) {
+                $error = "Failed to update member status";
+                log_message('error', $error);
+                throw new \Exception($error);
+            }
+    
+            log_message('info', "Successfully updated member status for MemberId: $memberId");
+            return true;
+        } catch (\Exception $e) {
+            log_message('error', 'Exception in updateMember: ' . $e->getMessage() . ' on line ' . $e->getLine());
+            return false;
+        }
+    }
+    
+    
 
     public function loadMemberData(){
         $entityType = $this->request->getPost('entity_type');
