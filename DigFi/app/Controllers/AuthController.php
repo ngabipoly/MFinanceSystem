@@ -246,7 +246,7 @@ class AuthController extends BaseController
     {
         $user = new UserModel();
         $user = $user->where('UserCode', $user_code)->first();
-        if ($user && $user['FailedLoginAttempts'] >= 5) {
+        if ($user && $user['FailedLoginAttempts'] >= MAX_LOGIN_ATTEMPTS) {
             return true;
         }
         return false;

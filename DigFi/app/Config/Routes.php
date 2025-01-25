@@ -105,10 +105,17 @@ $routes->post('entities/save-group-member', 'Entities::saveMember');
 $routes->post('entities/member', 'Entities::loadMemberData');
 $routes->get('entities/saccos', 'Entities::saccoIndex');
 $routes->post('entities/save-sacco', 'Entities::saveSacco');
-$routes->post('entities/get-sacco/', 'Entities::getSacco');
-$routes->post('entities/get-group/', 'Entities::getGroup');
-$routes->post('entities/change-sacco-status/', 'Entities::changeSaccoStatus/');
+$routes->post('entities/get-sacco', 'Entities::getSacco');
+$routes->post('entities/get-group', 'Entities::getGroup');
+$routes->post('entities/change-sacco-status', 'Entities::changeSaccoStatus/');
 $routes->post('entities/save-sacco-member','Entities::saveMember');
 $routes->post('entities/change-sacco-member-status','Entities::changeMemberStatus');
 
+//Finance Routes
+$routes->get('finance/transactions', 'FinanceController::transactionsIndex');
+$routes->post('finance/get-transaction', 'FinanceController::getSingleTransaction');
+$routes->post('finance/save-transaction', 'FinanceController::saveTransaction');
+$routes->post('finance/adjustments', 'FinanceController::adjustTransaction');
+$routes->get('finance/manage-organization', 'FinanceController::manageOrganization');
+$routes->get('finance/recordIncome', 'FinanceController::recordIncome');
 

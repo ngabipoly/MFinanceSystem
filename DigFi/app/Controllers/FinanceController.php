@@ -3,8 +3,8 @@ namespace App\Controllers;
 use App\Controllers\BaseController;
 use App\Models\AccountModel;
 use App\Models\TransactionModel;
-use App\Models\TransactionTypeModel;
-use App\Models\TransactionMethodModel;
+use App\Models\TransactionTypesModel;
+use App\Models\TransactionMethodsModel;
 use App\Models\TransactionProviderModel;
 use App\Models\TransactionStatusModel;
 use App\Models\TransactionMethodProviderModel;
@@ -78,9 +78,48 @@ function saveLoanApplication(){
     return redirect()->to('/loans/loan-applications')->with('success', 'Loan Application Created Successfully');    
 }
 
-public function editLoan(){
+    public function editLoan(){
+        
 
-}
+    }
     
+    public function manageOrganization(){
+        try {
+            $transType = new TransactionTypesModel();  
+            $transMethods = new TransactionMethodsModel();          
+
+            $data = [
+                'title' => 'Manage Organization',
+                'page'=>'Manage Organization',
+                'user' => $this->user,
+                'CreditTransactions' => $transType->where('TypeCategory', 'CRD')->findAll(),
+                'DebitTransactions' => $transType->where('TypeCategory', 'DBT')->findAll(),
+                'TransactionMethods' => $transMethods->findAll()
+            ];
+            return view('finance/manage-organization', $data);
+        } catch (\Exception $e) {
+            return "Error: ". $e->getMessage();
+        }
+    }
+
+    public function saveTransaction(array $saveData){
+        $data = [
+            'user' => $this->user,
+            'TransactionNumber' => $saveData['TransactionNumber'],
+            'TransactionDate' => $saveData['TransactionDate'],
+            'TransactionTypeID' => $saveData['TransactionTypeID'],
+            'TransactionMethodID' => $saveData['TransactionMethodID'],
+            'TransactionProviderID' => $saveData['TransactionProviderID'],
+            'TransactionStatusID' => $saveData['TransactionStatusID'],
+            'TransactionAmount' => $saveData['TransactionAmount'],
+            'TransactionDescription' => $saveData['TransactionDescription'],
+            'TransactionReference' => $saveData['TransactionReference'],
+            'TransactionCurrencyID' => $saveData['TransactionCurrencyID'],
+            'TransactorPhone' => $saveData['TransactorPhone'],
+            'TransactorEmail' => $saveData['TransactorEmail'],
+            'TrasactorName' => $saveData['TrasactorName'],
+            'TransactorId' => $saveData['TransactorId'],
+        ];
+    }
 
 }

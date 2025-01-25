@@ -8,6 +8,9 @@ use App\Models\AccountHolderModel;
 
 class AccountManagement extends BaseController
 {
+    public function __construct(){
+        $this->user = session()->get('userData');
+    }
     public function index()
     {
         $users = new UserModel();

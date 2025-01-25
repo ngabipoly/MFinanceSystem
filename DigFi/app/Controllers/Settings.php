@@ -515,10 +515,12 @@ class Settings extends BaseController
             $execMode = $this->request->getVar('execMode');
 
             if ($execMode=='create') {
+                $this->logger->info("Creating Transaction Type");
                 $data['CreatedBy'] = $this->user['UserId'];
             }
 
             if ($execMode=='edit') {
+                $this->logger->info("Updating Transaction Type Details");
                 $rules['type-id'] = 'required';
                 $action =  "Updating Transaction Type Details";
                 $data['TransactionTypeID']= $this->request->getPost('type-id');
@@ -538,7 +540,7 @@ class Settings extends BaseController
             }
 
             $transactionTypes = new TransactionTypesModel();
-
+            $this->logger->info("Saving Transaction Type Data: " . json_encode($data));
             return saveData('Transaction Type Creation', $transactionTypes, $data);         
         } catch (\Exception $e) {
             $this->logger->error("Error Saving Transaction Type: " . $e->getMessage());
@@ -548,7 +550,6 @@ class Settings extends BaseController
                 'data' => ["Error"=>$e->getMessage()]
             ]);
         }
-
     }
 
 
@@ -807,6 +808,57 @@ class Settings extends BaseController
             return json_encode([
                 'status' => 'error',
                 'message' => "Error Changing Provider Status",
+                'data' => ["Error"=>$e->getMessage()]
+            ]);
+        }
+    }
+    public function organizationSettings(): string{
+        $data = [
+            'page'=>"Organization Settings",
+            'organizationSettings' => $this->user
+        ];
+        return view('setup/organizationSettings', $data);
+    }
+
+    public function saveOrganizationSettings(): string{
+        $action = "Saving Organization Settings";
+        try {
+            $this->logger->info("Saving Organization Settings: " . json_encode($this->request->getVar()));
+            $organization = new OrganizationModel();
+            $data = [
+                'OrganizationName' => $this->request->getPost('organization-name'),
+                'OrganizationAddress' => $this->request->getPost('organization-address'),
+                'OrganizationPhone' => $this->request->getPost('organization-phone'),
+                'OrganizationEmail' => $this->request->getPost('organization-email'),
+                'OrganizationLogo' => $this->request->getPost('organization-logo')
+            ];
+            //get logo file uploaded
+            $file = $this->request->getFile('organization-logo');
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/bmp', 'image/webp'];
+            if (!in_array($file->getMimeType(), $allowedTypes)) {
+                log_message('error', 'Invalid file type: ' . $file->getMimeType());
+                $data = [
+                    'status' => 'error',
+                    'message' => "<h6>Invalid File Type!</h6> \n Please select a valid image file.",
+                    'data' => [
+                        'File Type' => $file->getMimeType()
+                    ]
+                ];
+                return json_encode($data);
+            } 
+
+            if ($file->isValid() && !$file->hasMoved()) {
+                $newName = $file->getRandomName();
+                $file->move(LOGO_PATH, $newName);
+                $data['OrganizationLogo'] = $newName;
+            }
+
+            return saveData($action, $organization, $data);
+        } catch (\Exception $e) {
+            $this->logger->error("Error Saving Organization Settings: " . $e->getMessage());
+            return json_encode([
+                'status' => 'error',
+                'message' => "Error Saving Organization Settings",
                 'data' => ["Error"=>$e->getMessage()]
             ]);
         }

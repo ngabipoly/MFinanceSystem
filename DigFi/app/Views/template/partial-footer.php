@@ -1530,7 +1530,7 @@ function db_submit(resTarget,formSubmited,sendMsg){
           	if(response.status=='success'){
           		toastr.success(response.message);
               $(formSubmited).trigger("reset");    
-              if(typeof response.redir_to !='undefined' || response.redirect !=''){
+              if ((typeof response.redir_to !== 'undefined' && response.redir_to !== '') || (typeof response.redirect !== 'undefined' && response.redirect !== '')){
                 redirectUrl = response.redir_to || response.redirect;
                 async function pauseExecution() {
                   console.log(`Redirecting in 5 seconds`);
