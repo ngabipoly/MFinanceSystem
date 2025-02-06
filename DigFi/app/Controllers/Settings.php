@@ -1,12 +1,14 @@
 <?php
 namespace App\Controllers;
 use App\Models\LoansProductsModel;
+use App\Models\AccountModel;
 use App\Models\AccountTypesModel;
 use App\Models\AccountNaturesModel;
 use App\Models\IdentificationTypesModel;
 use App\Models\TransactionTypesModel;
 use App\Models\TransactionMethodsModel;
 use App\Models\TransactionMethodProviderModel as ProviderModel;
+use App\Models\OrganizationModel;
 use CodeIgniter\Config\Services;
 
 
@@ -813,54 +815,107 @@ class Settings extends BaseController
         }
     }
     public function organizationSettings(): string{
+        $orgModel = new OrganizationModel();
+        $settings = $orgModel->where('AppID', 1)->first();
         $data = [
             'page'=>"Organization Settings",
-            'organizationSettings' => $this->user
+            'organizationSettings' => $settings
         ];
-        return view('setup/organizationSettings', $data);
+        return view('setup/setupOrganization', $data);
     }
 
-    public function saveOrganizationSettings(): string{
+    public function saveOrganizationSettings(): object {
         $action = "Saving Organization Settings";
         try {
             $this->logger->info("Saving Organization Settings: " . json_encode($this->request->getVar()));
-            $organization = new OrganizationModel();
-            $data = [
-                'OrganizationName' => $this->request->getPost('organization-name'),
-                'OrganizationAddress' => $this->request->getPost('organization-address'),
-                'OrganizationPhone' => $this->request->getPost('organization-phone'),
-                'OrganizationEmail' => $this->request->getPost('organization-email'),
-                'OrganizationLogo' => $this->request->getPost('organization-logo')
-            ];
-            //get logo file uploaded
+            
+            $db = \Config\Database::connect();
+            $db->transStart();  // ✅ Start transaction
+    
+            // ✅ Ensure models use the same DB connection
+            $organization = new OrganizationModel($db);
+            $accountModel = new AccountModel($db);
+    
+            $organizationData = [
+                'OrgName' => $this->request->getPost('organization-name'),
+                'orgAddress' => $this->request->getPost('organization-address'),
+                'orgPhoneNumber' => $this->request->getPost('organization-phone'),
+                'orgEmail' => $this->request->getPost('organization-email'),
+                'AppID' => $this->request->getPost('organization-id'),
+                'orgWebsite' => $this->request->getPost('organization-url'),
+            ];  
+    
+            // ✅ Handle File Upload (Logo)
             $file = $this->request->getFile('organization-logo');
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/bmp', 'image/webp'];
-            if (!in_array($file->getMimeType(), $allowedTypes)) {
-                log_message('error', 'Invalid file type: ' . $file->getMimeType());
-                $data = [
-                    'status' => 'error',
-                    'message' => "<h6>Invalid File Type!</h6> \n Please select a valid image file.",
-                    'data' => [
-                        'File Type' => $file->getMimeType()
-                    ]
-                ];
-                return json_encode($data);
-            } 
-
-            if ($file->isValid() && !$file->hasMoved()) {
-                $newName = $file->getRandomName();
-                $file->move(LOGO_PATH, $newName);
-                $data['OrganizationLogo'] = $newName;
+            if ($file !== null && $file->isValid() && !$file->hasMoved()) {
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/bmp', 'image/webp'];
+                if (!in_array($file->getMimeType(), $allowedTypes)) {
+                    return redirect()->back()->with('error', 'Invalid file type!')->withInput();
+                }
+                $logoSavedName = $file->getRandomName();
+                $file->move(LOGO_PATH, $logoSavedName);
+                $organizationData['orgLogo'] = $logoSavedName;
             }
-
-            return saveData($action, $organization, $data);
+    
+            // ✅ Save Organization Data
+            $saveOrganizationData = json_decode(saveData($action, $organization, $organizationData), true);
+            if ($saveOrganizationData['status'] == 'error') {
+                $db->transRollback();
+                return redirect()->back()->with('error', $saveOrganizationData['message'])->withInput();
+            }
+    
+            $organizationID = $saveOrganizationData['data']['ID'];
+    
+            // ✅ Create or Update Account
+            if ($this->request->getPost('exec-mode') == 'add') {
+                $accountData = [
+                    'AppID' => $organizationID,
+                    'AccountName' => $this->request->getPost('organization-name'),
+                    'AccountType' => 0,
+                    'AccountNature' => 'O',
+                    'AccountStatus' => 'Active',
+                    'DateCreated' => date('Y-m-d H:i:s'),
+                    'CreatedBy' => $this->user['UserId'],
+                    'AccountNumber' => 'GAC-' . str_pad($organizationID, CUSTOMER_ACCOUNT_LENGTH, ACCOUNT_PAD_CHAR, STR_PAD_LEFT),
+                    'createdBy' => $this->user['UserId'],
+                    'CreatedAt' => date('Y-m-d H:i:s')
+                ];
+    
+                $account = json_decode(saveData('Create Organization Account', $accountModel, $accountData), true);
+                if ($account['status'] === 'error') {
+                    $db->transRollback();
+                    return redirect()->back()->with('error', $account['message'])->withInput();
+                }
+    
+                // ✅ Update Organization with Account ID
+                $orgUpdate = ['AppID' => $organizationID, 'accountId' => $account['data']['ID']];
+                $updateOrganization = json_decode(saveData('Updating Organization Account', $organization, $orgUpdate), true);
+                if ($updateOrganization['status'] == 'error') {
+                    $db->transRollback();
+                    return redirect()->back()->with('error', $updateOrganization['message'])->withInput();
+                }
+            } else {
+                // ✅ Update Existing Account Name
+                $orgAccountUpdate = [
+                    'AccountID' => $this->request->getPost('account-id'),
+                    'AccountName' => $this->request->getPost('organization-name'),
+                    'UpdatedAt' => date('Y-m-d H:i:s'),
+                    'lastUpdatedBy' => $this->user['UserId']
+                ];
+                $updateAccount = json_decode(saveData('Update Organization Account', $accountModel, $orgAccountUpdate), true);
+                if ($updateAccount['status'] == 'error') {
+                    $db->transRollback();
+                    return redirect()->back()->with('error', $updateAccount['message'])->withInput();
+                }
+            }
+    
+            $db->transCommit();  // ✅ Commit transaction
+            $message = ($this->request->getPost('exec-mode') == 'edit') ? 'Organization Settings Updated Successfully!' : 'Organization Settings Saved Successfully!';
+            return redirect()->back()->with('success', $message);
         } catch (\Exception $e) {
-            $this->logger->error("Error Saving Organization Settings: " . $e->getMessage());
-            return json_encode([
-                'status' => 'error',
-                'message' => "Error Saving Organization Settings",
-                'data' => ["Error"=>$e->getMessage()]
-            ]);
+            $db->transRollback();  // ✅ Ensure rollback on error
+            return redirect()->back()->with('error', $e->getMessage())->withInput();
         }
-    }
+    }  
+    
 }

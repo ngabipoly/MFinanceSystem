@@ -88,9 +88,11 @@ function showMessage($message)
     function saveData($actionPerformed, $model, $data): string
     {
         try {
-            $saveDetails = $model->save($data);
+            writeLog("Attempting to " . $actionPerformed . ": " . json_encode($data));
+            $model->save($data);
 
-            if (!$saveDetails) {
+            if ($model->errors()) {
+                writeLog("Action " . $actionPerformed. " failed: " . json_encode($model->errors()));
                 return json_encode([
                     'status' => 'error',
                     'message' => 'Action ' . $actionPerformed. ' failed',
@@ -98,6 +100,7 @@ function showMessage($message)
                 ]);
             }
 
+            writeLog("Action " . $actionPerformed . " successful: " . json_encode(["ID" => $model->insertID()]));
             return json_encode([
                 'status' => 'success',
                 'message' => 'Action ' . $actionPerformed . ' successful',
@@ -105,10 +108,11 @@ function showMessage($message)
             ]);
 
         } catch (\Exception $e) {
+            writeLog("Action " . $actionPerformed. " failed: " . $e->getMessage());
             return json_encode([
                 'status' => 'error',
                 'message' => 'Action ' . $actionPerformed. ' failed',
-                'data' => ["Error" => $e->getMessage(), "Data" => $data]
+                'data' => ["Error" => $e->getMessage() . " On line " . $e->getLine(), "Data" => $data]
             ]);
         }
     }

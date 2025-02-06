@@ -1473,6 +1473,31 @@ $('.get-sacco-member, .edit-sacco-member').click(function(e){
     });
 });
 
+$('#save-organization-settings').click(function(e){
+  e.preventDefault();
+  let form = $('#organization-settings-form');
+  form.submit();
+})
+
+$('#income-source').change(function(){
+  //get data attribute of selected option
+  let prefix = $(this).find(':selected').data('trans-suffix');
+  console.log(prefix);
+  $('#transaction-prefix').val(prefix)
+})
+
+$('#save-income').click(function(e){
+  e.preventDefault();
+  let form = $('#manage-income-form');
+  form.submit();
+});
+
+$('#load-account-statement').click(function(e){
+  e.preventDefault();
+  let form = $('#account-statement-form');
+  form.submit();
+});
+
 function getLinkData(url, data, msg) {
     toastr.info(msg);
 

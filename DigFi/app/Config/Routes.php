@@ -28,6 +28,9 @@ $routes->post('user-role-manager/delete', 'UserManager::deleteUserRole');
 $routes->post('user-role-mananger/role-menus', 'UserManager::roleMenus');
 
 ##System Setup Routes
+#organization
+$routes->get('setup/organization', 'Settings::organizationSettings');
+$routes->post('setup/organization/save', 'Settings::saveOrganizationSettings');
 #loans
 $routes->get('setup/loans', 'Settings::loansIndex');
 $routes->post('setup/loans/save', 'Settings::saveLoanProduct');
@@ -118,4 +121,9 @@ $routes->post('finance/save-transaction', 'FinanceController::saveTransaction');
 $routes->post('finance/adjustments', 'FinanceController::adjustTransaction');
 $routes->get('finance/manage-organization', 'FinanceController::manageOrganization');
 $routes->get('finance/recordIncome', 'FinanceController::recordIncome');
+$routes->post('finance/organization/record-income','FinanceController::recordOrganizationIncome');
+$routes->get('finance/transaction-report/(:num)', 'FinanceController::viewTransactionReport');
+
+#Reports
+$routes->post('finance/organization/account-statement','FinanceController::accountStatement');
 

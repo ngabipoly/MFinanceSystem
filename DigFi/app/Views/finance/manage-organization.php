@@ -57,26 +57,28 @@
                 <div id="manage-income-modal-content">
                     <div class="row">
                         <div class="col-md-12">
-                            <form action="" class="form-horizontal form-label-left db-submit" method="post">
+                            <form action="<?php echo base_url('finance/organization/record-income'); ?>" class="form-horizontal form-label-left db-submit" method="post" id="manage-income-form" data-initmsg="Recording Income...">
                                 <div class="form-group row">
                                     <label class="col-form-label col-md-3 col-sm-3 ">Source Type</label>
                                     <div class="col-md-9 col-sm-9 ">
-                                        <select name="income-source" id="income-source" class="form-control form-control-sm">
+                                        <select name="income-source" id="income-source" class="form-control form-control-sm" required>
                                             <option value="">Select</option>
                                             <?php
                                                 if($CreditTransactions){
                                                     foreach($CreditTransactions as $CreditTransaction){
-                                                        echo '<option value="'.$CreditTransaction['TransactionTypeID'].'" data-trans-suffix="'.$CreditTransaction['Suffix'].'">'.$CreditTransaction['TransactionTypeName'].'</option>';
+                                                        echo '<option value="'.$CreditTransaction['TransactionTypeID'].'" data-category data-trans-suffix="'.$CreditTransaction['Suffix'].'">'.$CreditTransaction['TransactionTypeName'].'</option>';
                                                     }                                                     
                                                 }
                                                 ?>
                                         </select>
+                                        <input type="hidden" name="transaction-prefix" id="transaction-prefix" value="">
+                                        <input type="hidden" name="transaction-category" id="transaction-category" value="CRD">
                                     </div>
                                 </div>
                                 <div class="form-group row">
                                     <label class="col-form-label col-md-3 col-sm-3 ">Transaction Method</label>
                                     <div class="col-md-9 col-sm-9 ">
-                                        <select name="transaction-method" id="transaction-method" class="form-control form-control-sm">
+                                        <select name="transaction-method" id="transaction-method" class="form-control form-control-sm" required>
                                             <option value="">Select</option>
                                             <?php
                                                 if($TransactionMethods){
@@ -92,23 +94,20 @@
                                 <div class="form-group row">
                                     <label class="col-form-label col-md-3 col-sm-3 ">Source</label>
                                     <div class="col-md-9 col-sm-9 ">
-                                        <input type="text" name="source" id="source" class="form-control form-control-sm">
+                                        <input type="text" name="source" id="source" class="form-control form-control-sm" required> 
                                     </div>
                                 </div>
 
                                 <div class="form-group row">
                                     <label class="col-form-label col-md-3 col-sm-3 ">Amount</label>
                                     <div class="col-md-9 col-sm-9 ">
-                                        <input type="number" name="amount" id="amount" class="form-control form-control-sm">
+                                        <input type="number" name="amount" id="amount" class="form-control form-control-sm" required>
                                     </div>
-                                </div>
-
+                                </div>  
                                 <div class="form-group row">
                                     <label class="col-form-label col-md-3 col-sm-3 ">Narration</label>
                                     <div class="col-md-9 col-sm-9 ">
-                                        <textarea type="text" name="narration" id="narration" class="form-control form-control-sm">
-
-                                        </textarea>
+                                        <textarea type="text" name="narration" id="narration" class="form-control form-control-sm"></textarea>
                                     </div>
                                 </div>
                             </form>
@@ -194,17 +193,18 @@
                 <div id="main-account-statement-modal-content">
                     <div class="row">
                         <div class="col-md-12">
-                            <form action="" class="form-horizontal form-label-left db-submit" method="post">
+                            <form action="<?php echo base_url('finance/organization/account-statement'); ?>" class="form-horizontal form-label-left" method="post" id="account-statement-form" data-initmsg="Loading Statement...">
                                 <div class="form-group row">
                                     <label class="col-form-label col-md-3 col-sm-3 ">Start Date</label>
                                     <div class="col-md-9 col-sm-9 ">
-                                        <input type="date" name="start-date" id="start-date" class="form-control form-control-sm">
+                                        <input type="date" name="start-date" id="start-date" class="form-control form-control-sm" required>
+                                        <input type="hidden" name="orgType" value="O">
                                     </div>
                                 </div>
                                 <div class="form-group row">
                                     <label class="col-form-label col-md-3 col-sm-3 ">End Date</label>
                                     <div class="col-md-9 col-sm-9 ">
-                                        <input type="date" name="end-date" id="end-date" class="form-control form-control-sm">
+                                        <input type="date" name="end-date" id="end-date" class="form-control form-control-sm" required>
                                     </div>
                                 </div>
                             </form>
@@ -214,7 +214,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary btn-sm" id="save-main-account-statement">Load Statement</button>
+                <button type="button" class="btn btn-primary btn-sm" id="load-account-statement">Load Statement</button>
             </div>
         </div>
     </div>
